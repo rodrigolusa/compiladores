@@ -21,4 +21,4 @@
 25 TK_LIT_FALSE [false]
 26 TK_LIT_TRUE [true]
 28 TK_ESPECIAL [!]
-34 TK_ERRO [@]
+30 TK_ERRO [@]
