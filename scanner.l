@@ -5,9 +5,14 @@
 %option noyywrap
 %option yylineno
 
+%x COMMENT
+
 carac_normais [-!*/%+<>{}()=,;]
 
 %%
+
+"//".*
+"/*"    BEGIN(COMMENT);
 
 {carac_normais} { return  yytext[0]; }
 
@@ -37,8 +42,15 @@ true              return TK_LIT_TRUE;
 
 " "
 "\n"              yylineno;
+"\t"
+"\r"
 
 .                 return TK_ERRO;
+
+<COMMENT>.
+<COMMENT>"\n"   yylineno;
+<COMMENT>"*/"  BEGIN(INITIAL);
+
 %%
 
 int get_line_number(void) {
