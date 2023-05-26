@@ -1,10 +1,12 @@
-int 
-float
-bool
-if
+int numero_a
+float _numero
+bool iniciar
+if true
 else
-while
+while false
 return
+
+//comentário int
 
 <=
 >=
@@ -14,7 +16,7 @@ return
 |
 ->
 
-oi
+oi      //comentario
 _i
 o_
 
@@ -25,6 +27,12 @@ o_
 false
 true
 
-!
+/* comentatio
+de
+varias
+linhas */
+
+
+! * / % + - < > { } ( ) = , ;
 
 @
