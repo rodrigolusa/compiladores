@@ -32,7 +32,49 @@ extern char *yytext;
 
 %%
 
+
+/* programa */
+
 programa:
+    array | ;
+array: 
+    array element | element;
+element:
+    function | global_var;
+
+/* tipos */
+
+type:
+    TK_PR_INT | TK_PR_FLOAT | TK_PR_BOOL ;
+
+/* variáveis globais */
+global:
+    type vars ';';
+
+vars:
+    vars ',' TK_IDENTIFICADOR | TK_IDENTIFICADOR;
+
+
+
+/* função */
+
+function:
+    header body;
+
+header:
+    TK_IDENTIFICADOR '(' param_list ')' TK_OC_MAP type;
+
+param_list:
+    params | ;
+
+params:
+    params ',' param | param ;
+
+param:
+    type TK_IDENTIFICADOR;
+
+body:
+
 
 %%
 
