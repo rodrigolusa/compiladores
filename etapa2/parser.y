@@ -40,7 +40,7 @@ programa:
 array: 
     array element | element;
 element:
-    function | global_var;
+    function | global;
 
 /* tipos */
 
