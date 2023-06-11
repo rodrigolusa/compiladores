@@ -1,13 +1,8 @@
-all:
+all:	
+	bison -d parser.y
 	flex scanner.l
-	gcc lex.yy.c main.c
-flex:
-	flex scanner.l
-mainc:
-	gcc lex.yy.c main.c
-test:
-	./a.out < test.in > test.out
-diff:
-	diff test.out expected.out
+	gcc -c lex.yy.c parser.tab.c main.c
+	gcc -o etapa2 lex.yy.o parser.tab.o main.o -lfl
+
 clean:
-	rm lex.yy.c a.out test.out
+	rm main.o lex.yy.o lex.yy.c etapa2 parser.tab.o parser.tab.c parser.tab.h parser.output
