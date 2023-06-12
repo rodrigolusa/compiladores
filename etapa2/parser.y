@@ -34,7 +34,6 @@ extern char *yytext;
 
 
 /* programa */
-
 programa:
     array | ;
 array: 
@@ -42,10 +41,16 @@ array:
 element:
     function | global;
 
-/* tipos */
 
+/* tipos */
 type:
     TK_PR_INT | TK_PR_FLOAT | TK_PR_BOOL ;
+
+
+/* literais*/
+literal:
+    TK_LIT_INT | TK_LIT_FLOAT | TK_LIT_TRUE | TK_LIT_FALSE ;
+
 
 /* variáveis globais */
 global:
@@ -55,9 +60,7 @@ vars:
     vars ',' TK_IDENTIFICADOR | TK_IDENTIFICADOR;
 
 
-
 /* função */
-
 function:
     header body;
 
@@ -74,6 +77,63 @@ param:
     type TK_IDENTIFICADOR;
 
 body:
+    commands_block;
+
+
+/* bloco de comando */
+commands_block:
+    '{' simple_command_list '}'
+
+simple_command_list:
+    simple_command_list simple_command ';' | ;
+
+
+/* comandos simples */
+simple_command:
+    local_var_command | set_command | function_command | return_command;
+
+
+/* declaração de variável */
+local_var_command:
+    type local_vars_list ';';
+
+local_vars_list:
+    local_vars_list ',' TK_IDENTIFICADOR | local_vars_list ',' TK_IDENTIFICADOR TK_OC_LE literal | TK_IDENTIFICADOR TK_OC_LE literal  | TK_IDENTIFICADOR;
+
+
+/* declaração de atribuição */
+set_command:
+    TK_IDENTIFICADOR TK_OC_EQ expr;
+
+
+/* comando de função
+function_command:
+    TK_IDENTIFICADOR '(' args ')';
+
+args:
+    args ',' expr | expr;
+
+
+/* comando de retorno */
+return_command:
+    TK_PR_RETURN expr;
+
+
+/* comandos de controle de fluxo */
+flow_control_command:
+    condicional | iterative;
+
+condicional:
+    TK_PR_IF '(' expr ')' commands_block condicional_complement;
+
+condicional_complement:
+    TK_PR_ELSE commands_block | ;
+
+iterative:
+    TK_PR_WHILE '(' expr ')' commands_block;
+
+
+expr:
 
 
 %%
