@@ -2,7 +2,7 @@
 
 %{
 int yylex(void);
-int yyerror (char const *s);
+void yyerror (char const *s);
 extern int get_line_number (void);
 extern char *yytext;
 #include <stdlib.h>
@@ -51,6 +51,9 @@ type:
 literal:
     TK_LIT_INT | TK_LIT_FLOAT | TK_LIT_TRUE | TK_LIT_FALSE;
 
+/* operando */
+operando:
+    TK_IDENTIFICADOR | literal | function;
 
 /* variáveis globais */
 global:
@@ -138,13 +141,17 @@ condicional_complement:
 iterative:
     TK_PR_WHILE '(' expr ')' commands_block;
 
-
-expr:
-
+expr : expr TK_OC_OR expr2 | expr2;
+expr2: expr2 TK_OC_AND expr3 | expr3;
+expr3: expr3 TK_OC_NE expr4 | expr3 TK_OC_EQ expr4 | expr4;
+expr4: expr4 '<' expr5 | expr4 '>' expr5 | expr4 TK_OC_LE expr5 | expr4 TK_OC_GE expr5 | expr5;
+expr5: expr5 '+' expr6 | expr5 '-' expr6 | expr6;
+expr6: expr6 '*' expr7 | expr6 '/' expr7 | expr6 '%' expr7 | expr7;
+expr7: '!' expr8 | '-' expr8 | expr8 ;
+expr8: operando | '(' expr ')';
 
 %%
 
-int yyerror(char const *s){
+void yyerror(char const *s){
 	printf("%s at line %d UNEXPECTED token \"%s\" \n", s,get_line_number(), yytext);
-	return 1;
 }
