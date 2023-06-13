@@ -44,12 +44,12 @@ element:
 
 /* tipos */
 type:
-    TK_PR_INT | TK_PR_FLOAT | TK_PR_BOOL ;
+    TK_PR_INT | TK_PR_FLOAT | TK_PR_BOOL;
 
 
 /* literais*/
 literal:
-    TK_LIT_INT | TK_LIT_FLOAT | TK_LIT_TRUE | TK_LIT_FALSE ;
+    TK_LIT_INT | TK_LIT_FLOAT | TK_LIT_TRUE | TK_LIT_FALSE;
 
 
 /* variáveis globais */
@@ -71,7 +71,7 @@ param_list:
     params | ;
 
 params:
-    params ',' param | param ;
+    params ',' param | param;
 
 param:
     type TK_IDENTIFICADOR;
@@ -82,32 +82,38 @@ body:
 
 /* bloco de comando */
 commands_block:
-    '{' simple_command_list '}'
+    '{' simple_commands '}';
+
+simple_commands:
+    simple_command_list | ;
 
 simple_command_list:
-    simple_command_list simple_command ';' | ;
+    simple_command_list simple_command ';' | simple_command ';';
 
 
 /* comandos simples */
 simple_command:
-    local_var_command | set_command | function_command | return_command;
+    local_var_command | set_command | function_call | return_command | flow_control_command;
 
 
 /* declaração de variável */
 local_var_command:
-    type local_vars_list ';';
+    type local_vars_list;
 
 local_vars_list:
-    local_vars_list ',' TK_IDENTIFICADOR | local_vars_list ',' TK_IDENTIFICADOR TK_OC_LE literal | TK_IDENTIFICADOR TK_OC_LE literal  | TK_IDENTIFICADOR;
+    local_vars_list ',' TK_IDENTIFICADOR local_var_list_complement | TK_IDENTIFICADOR local_var_list_complement;
+
+local_var_list_complement:
+    TK_OC_LE literal | ;
 
 
-/* declaração de atribuição */
+/* comando de atribuição */
 set_command:
-    TK_IDENTIFICADOR TK_OC_EQ expr;
+    TK_IDENTIFICADOR '=' expr;
 
 
-/* comando de função
-function_command:
+/* comando de função */
+function_call:
     TK_IDENTIFICADOR '(' args ')';
 
 args:
