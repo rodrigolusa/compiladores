@@ -5,8 +5,11 @@ int yylex(void);
 void yyerror (char const *s);
 extern int get_line_number (void);
 extern char *yytext;
+extern void *arvore;
+
 #include <stdlib.h>
 #include <stdio.h>
+#include "arvore.h"
 %}
 
 %token TK_PR_INT
@@ -29,6 +32,11 @@ extern char *yytext;
 %token TK_LIT_FALSE
 %token TK_LIT_TRUE
 %token TK_ERRO
+
+
+%union {
+    struct TipoLexico* valor_lexico;
+}
 
 %%
 

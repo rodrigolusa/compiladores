@@ -1,5 +1,5 @@
 %{
-    #include<stdio.h>
+    #include "arvore.h"
     #include "parser.tab.h"
 %}
 %option noyywrap
@@ -32,13 +32,30 @@ return            return TK_PR_RETURN;
 "|"               return TK_OC_OR;
 "->"              return TK_OC_MAP;
 
-[0-9]+            return TK_LIT_INT;
-[0-9]*"."[0-9]+   return TK_LIT_FLOAT;
+[0-9]+          { 
+                    yylval.valor_lexico = criarTipoLexico(yylineno, LEX_LIT_INT, strdup(yytext)); 
+                    return TK_LIT_INT; 
+                }
 
-false             return TK_LIT_FALSE;
-true              return TK_LIT_TRUE;
+[0-9]*"."[0-9]+ {
+                    yylval.valor_lexico = criarTipoLexico(yylineno, LEX_LIT_FLOAT, strdup(yytext)); 
+                    return TK_LIT_FLOAT;
+                }
 
-[a-z_]+           return TK_IDENTIFICADOR;
+false           {
+                    yylval.valor_lexico = criarTipoLexico(yylineno, LEX_LIT_BOOL, strdup(yytext)); 
+                    return TK_LIT_FALSE; 
+                }
+
+true            {
+                    yylval.valor_lexico = criarTipoLexico(yylineno, LEX_LIT_BOOL, strdup(yytext)); 
+                    return TK_LIT_TRUE; 
+                }
+
+[a-z_]+         {
+                    yylval.valor_lexico = criarTipoLexico(yylineno, LEX_ID, strdup(yytext)); 
+                    return TK_IDENTIFICADOR; 
+                }
 
 " "
 "\n"              yylineno;

@@ -3,6 +3,8 @@
 #include <string.h>
 #include "arvore.h"
 
+extern void exporta (void *arvore);
+
 No *criarNoTipoLexico(TipoLexico *valor_lexico)
 {
     No *novo_nodo = (No *)malloc(sizeof(No));
@@ -63,4 +65,12 @@ void imprimirFilhos(No * pai)
     {
         imprimirFilhos(pai->filhos[i]);
     }
+}
+
+void exporta(void *arvore) {
+    No *pai = (No*) arvore;
+    
+    imprimirArestas(arvore);
+    printf("\n");
+    imprimirNos(arvore);
 }

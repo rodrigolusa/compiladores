@@ -73,10 +73,13 @@ int yylex(void);
 void yyerror (char const *s);
 extern int get_line_number (void);
 extern char *yytext;
+extern void *arvore;
+
 #include <stdlib.h>
 #include <stdio.h>
+#include "arvore.h"
 
-#line 80 "parser.tab.c"
+#line 83 "parser.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -567,14 +570,14 @@ static const yytype_int8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    38,    38,    38,    40,    40,    42,    42,    47,    47,
-      47,    52,    52,    52,    52,    56,    56,    56,    60,    63,
-      63,    68,    71,    74,    74,    77,    77,    80,    83,    88,
-      91,    91,    94,    94,    99,    99,    99,    99,    99,    99,
-     104,   107,   107,   110,   110,   115,   120,   123,   123,   128,
-     133,   133,   136,   139,   139,   142,   144,   144,   145,   145,
-     146,   146,   146,   147,   147,   147,   147,   147,   148,   148,
-     148,   149,   149,   149,   149,   150,   150,   150,   151,   151
+       0,    46,    46,    46,    48,    48,    50,    50,    55,    55,
+      55,    60,    60,    60,    60,    64,    64,    64,    68,    71,
+      71,    76,    79,    82,    82,    85,    85,    88,    91,    96,
+      99,    99,   102,   102,   107,   107,   107,   107,   107,   107,
+     112,   115,   115,   118,   118,   123,   128,   131,   131,   136,
+     141,   141,   144,   147,   147,   150,   152,   152,   153,   153,
+     154,   154,   154,   155,   155,   155,   155,   155,   156,   156,
+     156,   157,   157,   157,   157,   158,   158,   158,   159,   159
 };
 #endif
 
@@ -1222,7 +1225,7 @@ yyreduce:
   switch (yyn)
     {
 
-#line 1226 "parser.tab.c"
+#line 1229 "parser.tab.c"
 
       default: break;
     }
@@ -1415,7 +1418,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 153 "parser.y"
+#line 161 "parser.y"
 
 
 void yyerror(char const *s){
