@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 
-TipoLexico* criarTipoLexico(int linha, int tipo, const char* valor) {
+TipoLexico* criarTipoLexico(int linha, int tipo, char* valor) {
     TipoLexico* novo_tipo_lexico = (TipoLexico*) malloc(sizeof(TipoLexico));
 
     novo_tipo_lexico->linha = linha;
