@@ -1,6 +1,5 @@
-//Grupo P -> João Carlos Almeida da Silva - Rodrigo Antonio Rezende Lusa
-
 %{
+/*Grupo P -> João Carlos Almeida da Silva - Rodrigo Antonio Rezende Lusa*/
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -38,7 +37,6 @@ extern void *arvore;
 %token TK_ERRO
 
 %token<valor_lexico> literal
-
 %type<no> programa
 %type<no> array
 %type<no> element
@@ -129,7 +127,7 @@ element:
                         ;
 
 
-// TODO
+// TODO:types. Não sei se vai algo
 type:
     TK_PR_INT | TK_PR_FLOAT | TK_PR_BOOL;
 
@@ -161,11 +159,11 @@ operando:
                         }
                         ;
 
-// TODO
+// TODO:global. Não sei se vai algo
 global:
     type vars ';';
 
-// TODO
+// TODO:vars. Não sei se vai algo
 vars:
     vars ',' TK_IDENTIFICADOR | TK_IDENTIFICADOR;
 
@@ -182,17 +180,30 @@ header:
                     }
                     ;
 
-// TODO
 param_list:
-    params | ;
+                    params {
+                        $$ = $1;
+                    }
+                    | {
+                        $$ = NULL;
+                    }
+                    ;
 
-// TODO
 params:
-    params ',' param | param;
+                    param ',' params {
+                        adicionarFilho($1, $3);
+                        $$ = $1;
+                    }
+                    | param{
+                        $$ = $1;
+                    }
+                    ;
 
-// TODO
 param:
-    type TK_IDENTIFICADOR;
+                    expr {
+                        $$ = $1;
+                    }
+                    ;
 
 body:
                     commands_block {
@@ -211,54 +222,105 @@ commands_block:
                     }
                     ;
 
-// TODO
+// TODO:simple_commands
 simple_commands:
     simple_command_list | ;
 
-// TODO
+// TODO:simple_command_list
 simple_command_list:
     simple_command_list simple_command ';' | simple_command ';';
 
-
-// TODO
 simple_command:
-    local_var_command | set_command | function_call | return_command | flow_control_command | ;
+                        local_var_command {
+                            $$ = $1;
+                        }
+                        | set_command {
+                            $$ = $1;
+                        }
+                        | function_call {
+                            $$ = $1;
+                        }
+                        | return_command {
+                            $$ = $1;
+                        }
+                        | flow_control_command {
+                            $$ = $1;
+                        }
+                        ;
 
-
-// TODO
 local_var_command:
-    type local_vars_list;
+                        type local_vars_list {
+                            $$ = $2;
+                        }
+                        ;
 
-// TODO
 local_vars_list:
-    local_vars_list ',' TK_IDENTIFICADOR local_var_list_complement | TK_IDENTIFICADOR local_var_list_complement;
+                        TK_IDENTIFICADOR ',' local_vars_list {
+                            if($3 == NULL){
+                                $$ = NULL;
+                            } else{
+                                $$ = $3;
+                            }
+                        }
+                        local_var_list_complement ',' local_vars_list {
+                            adicionarFilho($1, $3);
+                            $$ = $1;
+                        }
+                        | TK_IDENTIFICADOR {
+                            $$ = NULL;
+                        }
+                        | local_var_list_complement {
+                            $$ = $1;
+                        }
+                        ;
 
-// TODO
 local_var_list_complement:
-    TK_OC_LE literal | ;
+                        TK_IDENTIFICADOR TK_OC_LE literal {
+                            $$ = criarNo("<=");
+                            adicionarFilho($$, criarNoTipoLexico($1));
+                            adicionarFilho($$, criarNoTipoLexico($3));
+                        }
+                        ;
 
-// TODO
 set_command:
-    TK_IDENTIFICADOR '=' expr;
+                        TK_IDENTIFICADOR '=' expr {
+                            $$ = criarNo("=");
+                            adicionarFilho($$, criarNoTipoLexico($1));
+                            adicionarFilho($$, $3);
+                        }
+                        ;
 
-// TODO
 function_call:
-    TK_IDENTIFICADOR '(' args ')';
+                        TK_IDENTIFICADOR '(' args ')' {
+                            $$ = criarNoTipoLexico($1);
+                            atualizarValor($$);
+                            adicionarFilho($$, $3);
+                        }
+                        ;
 
-// TODO
+// TODO:args. Revisar
 args:
-    args ',' expr | expr;
+                        args ',' expr {
+                            adicionarFilho($3, $1);
+                            $$ = $3;
+                        }
+                        | expr {
+                            $$ = $1;
+                        }
+                        ;
 
-
-// TODO
 return_command:
-    TK_PR_RETURN expr;
+                        TK_PR_RETURN expr {
+                            $$ = criarNo("return");
+                            adicionarFilho($$, $2);
+                        }
+                        ;
 
 
-// TODO
 flow_control_command:
     condicional | iterative;
 
+//if
 condicional:
                         TK_PR_IF '(' expr ')' commands_block condicional_complement {
                             $$ = criarNo("if");
@@ -271,6 +333,7 @@ condicional:
                         }
                         ;
 
+//else
 condicional_complement:
                         TK_PR_ELSE commands_block {
                             $$ = $2;
@@ -280,6 +343,7 @@ condicional_complement:
                         }
                         ;
 
+//while
 iterative:
                         TK_PR_WHILE '(' expr ')' commands_block {
                             $$ = criarNo("iterative");
