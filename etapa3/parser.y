@@ -37,6 +37,8 @@ extern void *arvore;
 %token TK_ERRO
 
 %type<no> programa
+%type<no> global
+%type<no> type
 %type<no> array
 %type<no> element
 %type<valor_lexico> literal
@@ -125,8 +127,16 @@ element:
 
 // types
 type:
-    TK_PR_INT | TK_PR_FLOAT | TK_PR_BOOL ;
-
+                        TK_PR_INT {
+                            $$ = criarNo("int");
+                        }
+                        | TK_PR_FLOAT {
+                            $$ = criarNo("float");
+                        }
+                        | TK_PR_BOOL {
+                            $$ = criarNo("bool");
+                        }
+                        ;
 
 literal:
                         TK_LIT_INT {
@@ -157,7 +167,13 @@ operando:
 
 // global
 global:
-                        type vars ';' ;
+                        type vars ';' {
+                            $$ = criarNo("global");
+                            adicionarFilho($$, $1);
+                            adicionarFilho($$, $2);
+                        }
+                        ;
+
 
 // vars
 vars:
