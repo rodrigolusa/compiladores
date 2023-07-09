@@ -82,11 +82,12 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 37 "parser.y"
+#line 83 "parser.y"
 
     struct TipoLexico* valor_lexico;
+    struct astNo* no;
 
-#line 90 "parser.tab.h"
+#line 91 "parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

@@ -36,18 +36,15 @@ extern void *arvore;
 %token<valor_lexico> TK_LIT_TRUE
 %token TK_ERRO
 
-%token<valor_lexico> literal
+%type<valor_lexico> literal
 %type<no> programa
 %type<no> array
 %type<no> element
 %type<no> function
-%type<no> global
-%type<no> type
+
 %type<no> operando
 %type<no> vars
 %type<no> header
-%type<no> param_list
-%type<no> param
 %type<no> body
 %type<no> commands_block
 %type<no> simple_command
@@ -58,7 +55,9 @@ extern void *arvore;
 %type<no> local_vars_list
 %type<no> set_command
 %type<no> function_call
+%type<no> args_list 
 %type<no> args
+%type<no> arg
 %type<no> return_command
 %type<no> flow_control_command
 %type<no> condicional
@@ -129,16 +128,7 @@ element:
 
 // types
 type:
-                        TK_PR_INT {
-                            $$ = criarNo("int");
-                        }
-                        | TK_PR_FLOAT {
-                            $$ = criarNo("float");
-                        }
-                        | TK_PR_BOOL {
-                            $$ = criarNo("bool");
-                        }
-                        ;
+    TK_PR_INT | TK_PR_FLOAT | TK_PR_BOOL ;
 
 
 literal:
@@ -170,12 +160,7 @@ operando:
 
 // global
 global:
-                        type vars ';' {
-                            $$ = criarNo("global");
-                            adicionarFilho($$, $1);
-                            adicionarFilho($$, $2);
-                        }
-                        ;
+                        type vars ';' ;
 
 // vars
 vars:
@@ -202,29 +187,13 @@ header:
                     ;
 
 param_list:
-                    params {
-                        $$ = $1;
-                    }
-                    | {
-                        $$ = NULL;
-                    }
-                    ;
+                    params | ;
 
 params:
-                    param ',' params {
-                        adicionarFilho($1, $3);
-                        $$ = $1;
-                    }
-                    | param{
-                        $$ = $1;
-                    }
-                    ;
+                    params ',' param | param ;
 
 param:
-                    expr {
-                        $$ = $1;
-                    }
-                    ;
+                    type TK_IDENTIFICADOR ;
 
 body:
                     commands_block {
@@ -298,7 +267,7 @@ local_vars_list:
                                 $$ = $3;
                             }
                         }
-                        local_var_list_complement ',' local_vars_list {
+                        | local_var_list_complement ',' local_vars_list {
                             adicionarFilho($1, $3);
                             $$ = $1;
                         }
@@ -327,20 +296,34 @@ set_command:
                         ;
 
 function_call:
-                        TK_IDENTIFICADOR '(' args ')' {
+                        TK_IDENTIFICADOR '(' args_list ')' {
                             $$ = criarNoTipoLexico($1);
                             atualizarValor($$);
                             adicionarFilho($$, $3);
                         }
                         ;
 
-// TODO:args. Revisar
-args:
-                        args ',' expr {
-                            adicionarFilho($3, $1);
-                            $$ = $3;
+args_list:
+                        args {
+                            $$ = $1;
                         }
-                        | expr {
+                        | {
+                            $$ = NULL;
+                        }
+                        ;
+
+args:
+                        arg ',' args {
+                            adicionarFilho($1, $3);
+                            $$ = $1;
+                        }
+                        | arg {
+                            $$ = $1;
+                        }
+                        ;
+
+arg:
+                        expr {
                             $$ = $1;
                         }
                         ;
