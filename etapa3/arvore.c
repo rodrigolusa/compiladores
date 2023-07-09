@@ -86,3 +86,10 @@ void atualizarValor(No* no)
         strcat(no->valor, "call ");
     }
 }
+
+int verificaValor(No* no, char *val) {
+    if(strcmp(no->valor, val) == 0)
+        return 1;
+    else
+	return 0;
+}

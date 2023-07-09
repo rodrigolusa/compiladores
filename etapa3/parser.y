@@ -41,22 +41,19 @@ extern void *arvore;
 %type<no> array
 %type<no> element
 %type<no> function
-
 %type<no> operando
 %type<no> vars
 %type<no> header
 %type<no> body
 %type<no> commands_block
 %type<no> simple_command
-%type<no> simple_command_list
-%type<no> simple_commands
+%type<no> command_list
 %type<no> local_var_command
 %type<no> local_var_list_complement
 %type<no> local_vars_list
 %type<no> set_command
 %type<no> function_call
 %type<no> args_list 
-%type<no> args
 %type<no> arg
 %type<no> return_command
 %type<no> flow_control_command
@@ -79,7 +76,6 @@ extern void *arvore;
 %type<no> expr6
 %type<no> expr7
 
-
 %union {
     struct TipoLexico* valor_lexico;
     struct astNo* no;
@@ -98,7 +94,7 @@ programa:
                             }
                         ;
 array: 
-                        array element {
+                        element array {
                             if($2 == NULL){
                                 $$ = $1;
                             } else{
@@ -153,7 +149,7 @@ operando:
                         | literal {
                             $$ = criarNoTipoLexico($1);
                         }
-                        | function {
+                        | function_call {
                             $$ = NULL;
                         }
                         ;
@@ -204,7 +200,7 @@ body:
 
 /* bloco de comando */
 commands_block:
-                    '{' simple_commands '}' {
+                    '{' simple_command '}' {
                         $$ = $2;
                     }
                     | '{' '}' {
@@ -212,46 +208,70 @@ commands_block:
                     }
                     ;
 
-// simple_commands
-simple_commands:
-                    simple_command_list {
-                        $$ = $1;
-                    }
-                    | {
-                        $$ = NULL;
-                    }
-                    ;
-
-// simple_command_list
-// "Listas de comandos, onde cada comando tem pelo
-// menos um filho, que é o próximo comando;"
-simple_command_list:
-                    simple_command_list simple_command ';' {
-                        $$ = $1;
-                        adicionarFilho($$, $2);
-                    }
-                    | simple_command ';' {
-                        $$ = $1;
-                    }
-                    ;
-
 simple_command:
-                        local_var_command {
+                    command_list simple_command {
+                        if($1 == NULL) 
+                        { 
+                            $$ = $2; 
+                        }
+                        else 
+                        { 
+                            if($2 != NULL) 
+                            {
+                                if(verificaValor($1, "<=") == 1) 
+                                { 
+                                    // if it is <=. Here only attr can be <=
+                                    No *folha = $1;
+                                    while(folha->n_filhos == 3)
+                                        folha = folha->filhos[2];
+                                    adicionarFilho(folha, $2);
+                                    //$$ = leaf_attr; point that started secondary recursion must turn into $$ (previous cmd_list in the recursion)
+                                }
+                            else 
+                            {
+                                adicionarFilho($1, $2);
+                                //$$ = $2;
+                            } 
+                            $$ = $1;
+                            } 
+                            else 
+                            { 
+                                $$ = $1; 
+                            } 
+                        } 
+                    }
+                    | command_list {
+                        if($1 != NULL)
+                        {
+                            $$ = $1;
+                        } else
+                        {
+                            $$ = NULL;
+                        }
+                    }
+                    ;
+
+command_list:
+                        commands_block {
+                            $$ = $1;
+                        }
+                        | local_var_command {
                             $$ = $1;
                         }
                         | set_command {
                             $$ = $1;
                         }
-                        | function_call {
+                        | flow_control_command {
                             $$ = $1;
                         }
                         | return_command {
                             $$ = $1;
                         }
-                        | flow_control_command {
+                        | function_call {
                             $$ = $1;
                         }
                         ;
+
 
 local_var_command:
                         type local_vars_list {
@@ -304,22 +324,13 @@ function_call:
                         ;
 
 args_list:
-                        args {
-                            $$ = $1;
-                        }
-                        | {
-                            $$ = NULL;
-                        }
-                        ;
-
-args:
-                        arg ',' args {
-                            adicionarFilho($1, $3);
-                            $$ = $1;
-                        }
-                        | arg {
-                            $$ = $1;
-                        }
+                        arg {
+                                $$ = criarNoTipoLexico($1);
+                            }
+                            | args_list ',' arg {
+                                adicionarFilho($1, $3);
+                                $$ = $1;
+                            }
                         ;
 
 arg:
