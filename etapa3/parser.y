@@ -36,31 +36,32 @@ extern void *arvore;
 %token<valor_lexico> TK_LIT_TRUE
 %token TK_ERRO
 
-%type<valor_lexico> literal
 %type<no> programa
 %type<no> array
 %type<no> element
-%type<no> function
+%type<valor_lexico> literal
 %type<no> operando
 %type<no> vars
+%type<no> function
 %type<no> header
 %type<no> body
 %type<no> commands_block
 %type<no> simple_command
 %type<no> command_list
 %type<no> local_var_command
-%type<no> local_var_list_complement
 %type<no> local_vars_list
+%type<no> local_var_list_complement
 %type<no> set_command
 %type<no> function_call
 %type<no> args_list 
+%type<no> args
 %type<no> arg
 %type<no> return_command
 %type<no> flow_control_command
 %type<no> condicional
 %type<no> condicional_complement
 %type<no> iterative
-%type<no> opUn
+%type<no> opG0
 %type<no> opG1
 %type<no> opG2
 %type<no> opG3
@@ -323,15 +324,25 @@ function_call:
                         }
                         ;
 
-args_list:
-                        arg {
-                                $$ = criarNoTipoLexico($1);
-                            }
-                            | args_list ',' arg {
-                                adicionarFilho($1, $3);
-                                $$ = $1;
-                            }
-                        ;
+
+
+args_list:              args{ 
+                            $$ = $1; 
+                        }
+		                | {
+                             $$ = NULL;
+                        }
+		                ;
+
+
+args:                   arg ',' args {
+                            adicionarFilho($1, $3); 
+                            $$ = $1; 
+                        } 
+			            | arg {
+                            $$ = $1;
+                        }
+		               ;
 
 arg:
                         expr {
@@ -382,7 +393,7 @@ iterative:
                         }
                         ;
 
-opUn:
+opG0:
                         '-' {
                             $$ = criarNo("-");
                         }
@@ -504,7 +515,7 @@ expr4:
                        ;
 
 expr5:
-                        expr5 {
+                        expr6 {
                             $$ = $1;
                         }
                         | expr5 opG1 expr6 {
@@ -518,7 +529,7 @@ expr6:
                         expr7 {
                             $$ = $1;
                         }
-                        | opUn expr7 {
+                        | opG0 expr7 {
                             adicionarFilho($1, $2);
                             $$ = $1;
                         }
