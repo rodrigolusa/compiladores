@@ -127,9 +127,18 @@ element:
                         ;
 
 
-// TODO:types. Não sei se vai algo
+// types
 type:
-    TK_PR_INT | TK_PR_FLOAT | TK_PR_BOOL;
+                        TK_PR_INT {
+                            $$ = criarNo("int");
+                        }
+                        | TK_PR_FLOAT {
+                            $$ = criarNo("float");
+                        }
+                        | TK_PR_BOOL {
+                            $$ = criarNo("bool");
+                        }
+                        ;
 
 
 literal:
@@ -152,20 +161,32 @@ operando:
                             $$ = criarNoTipoLexico($1);
                         }
                         | literal {
-                            $$ = criarNoTipoLexico($1)
+                            $$ = criarNoTipoLexico($1);
                         }
                         | function {
                             $$ = NULL;
                         }
                         ;
 
-// TODO:global. Não sei se vai algo
+// global
 global:
-    type vars ';';
+                        type vars ';' {
+                            $$ = criarNo("global");
+                            adicionarFilho($$, $1);
+                            adicionarFilho($$, $2);
+                        }
+                        ;
 
-// TODO:vars. Não sei se vai algo
+// vars
 vars:
-    vars ',' TK_IDENTIFICADOR | TK_IDENTIFICADOR;
+                        vars ',' TK_IDENTIFICADOR {
+                            $$ = $1;
+                            adicionarFilho($$, criarNoTipoLexico($3));
+                        }
+                        | TK_IDENTIFICADOR {
+                            $$ = criarNoTipoLexico($1);
+                        }
+                        ;
 
 function:
                     header body {
@@ -222,13 +243,28 @@ commands_block:
                     }
                     ;
 
-// TODO:simple_commands
+// simple_commands
 simple_commands:
-    simple_command_list | ;
+                    simple_command_list {
+                        $$ = $1;
+                    }
+                    | {
+                        $$ = NULL;
+                    }
+                    ;
 
-// TODO:simple_command_list
+// simple_command_list
+// "Listas de comandos, onde cada comando tem pelo
+// menos um filho, que é o próximo comando;"
 simple_command_list:
-    simple_command_list simple_command ';' | simple_command ';';
+                    simple_command_list simple_command ';' {
+                        $$ = $1;
+                        adicionarFilho($$, $2);
+                    }
+                    | simple_command ';' {
+                        $$ = $1;
+                    }
+                    ;
 
 simple_command:
                         local_var_command {
