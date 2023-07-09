@@ -3,7 +3,7 @@
 #include <string.h>
 #include "arvore.h"
 
-extern void exporta (void *arvore);
+extern void exporta(void *arvore);
 
 No *criarNoTipoLexico(TipoLexico *valor_lexico)
 {
@@ -29,14 +29,14 @@ No *criarNo(char *valor)
     return novo_nodo;
 }
 
-void adicionarFilho(No * pai, No * filho)
+void adicionarFilho(No *pai, No *filho)
 {
     pai->filhos = (No **)realloc(pai->filhos, (pai->n_filhos + 1) * sizeof(No *));
     pai->filhos[pai->n_filhos] = filho;
     pai->n_filhos++;
 }
 
-void imprimirArestas(No * pai)
+void imprimirArestas(No *pai)
 {
     for (int i = 0; i < pai->n_filhos; i++)
     {
@@ -49,7 +49,7 @@ void imprimirArestas(No * pai)
     }
 }
 
-void imprimirNos(No * pai)
+void imprimirNos(No *pai)
 {
     printf("%p [label=\"%s\"];\n", pai, pai->valor);
 
@@ -59,7 +59,7 @@ void imprimirNos(No * pai)
     }
 }
 
-void imprimirFilhos(No * pai)
+void imprimirFilhos(No *pai)
 {
     for (int i = 0; i < pai->n_filhos; i++)
     {
@@ -67,10 +67,22 @@ void imprimirFilhos(No * pai)
     }
 }
 
-void exporta(void *arvore) {
-    No *pai = (No*) arvore;
-    
+void exporta(void *arvore)
+{
+    No *pai = (No *)arvore;
+
     imprimirArestas(arvore);
-    printf("\n");
     imprimirNos(arvore);
+}
+
+void atualizarValor(No* no) 
+{
+    if (no->valor[0] == 'c' && strcmp(no->valor, "condicional") == 0)
+    {
+        strcpy(no->valor, "condicional_complement");
+    }
+    else if (no->valor_lexico->tipo == LEX_ID) 
+    {
+        strcat(no->valor, "call ");
+    }
 }
