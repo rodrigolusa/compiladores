@@ -83,8 +83,6 @@ extern void *arvore;
 
 %%
 
-
-/* programa */
 programa:
                         array { 
                             arvore = $1; 
@@ -95,33 +93,31 @@ programa:
                         ;
 array: 
                         element array {
-                            if($2 == NULL){
-                                $$ = $1;
-                            } else{
-                                if($1 != NULL){
-                                    adicionarFilho($2, $1);                                   
-                                }
+                            if($1 == NULL){
                                 $$ = $2;
+                            } else{
+                                if($2 != NULL){
+                                    adicionarFilho($1, $2);                                   
+                                }
+                                $$ = $1;
                             }
-                        } ;
-
-array:                   element {
+                        } 
+                        | element {
                             if($1 == NULL){
                                 $$ = $1;
                             } else{
                                 $$ = NULL;
                             }
                         } ;
+
 element:
                         function {
                             $$ = $1;
-                        } ;
-element:                global {
+                        } 
+                        | global {
                             $$ = NULL;
                         } ;
 
-
-// types
 type:
         TK_PR_INT
         | TK_PR_FLOAT
@@ -155,12 +151,9 @@ operando:
                         }
                         ;
 
-// global
 global:
        type vars ';' ;
 
-
-// vars
 vars:
                         vars ',' TK_IDENTIFICADOR
                         | TK_IDENTIFICADOR
@@ -194,8 +187,6 @@ body:
                     }
                     ;
 
-
-/* bloco de comando */
 commands_block:
                     '{' simple_command '}' {
                         $$ = $2;
@@ -217,17 +208,14 @@ simple_command:
                             {
                                 if(verificaValor($1, "<=") == 1) 
                                 { 
-                                    // if it is <=. Here only attr can be <=
                                     No *folha = $1;
                                     while(folha->n_filhos == 3)
                                         folha = folha->filhos[2];
                                     adicionarFilho(folha, $2);
-                                    //$$ = leaf_attr; point that started secondary recursion must turn into $$ (previous cmd_list in the recursion)
                                 }
                             else 
                             {
                                 adicionarFilho($1, $2);
-                                //$$ = $2;
                             } 
                             $$ = $1;
                             } 
@@ -268,7 +256,6 @@ command_list:
                             $$ = $1;
                         }
                         ;
-
 
 local_var_command:
                         type local_vars_list {
@@ -320,8 +307,6 @@ function_call:
                         }
                         ;
 
-
-
 args_list:              args{ 
                             $$ = $1; 
                         }
@@ -329,7 +314,6 @@ args_list:              args{
                              $$ = NULL;
                         }
 		                ;
-
 
 args:                   arg ',' args {
                             adicionarFilho($1, $3); 
@@ -353,14 +337,13 @@ return_command:
                         }
                         ;
 
-
 flow_control_command:
     condicional | iterative ';';
 
 //if
 condicional:
                         TK_PR_IF '(' expr ')' commands_block condicional_complement {
-                            $$ = criarNo("if");
+                            $$ = criarNo("condicional");
                             adicionarFilho($$, $3);
                             adicionarFilho($$, $5);
                             adicionarFilho($$, $6);

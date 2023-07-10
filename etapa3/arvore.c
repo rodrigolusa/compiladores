@@ -77,22 +77,10 @@ void imprimirNos(No *pai)
     }
 }
 
-/*
-void imprimirFilhos(No *pai)
-{
-    for (int i = 0; i < pai->n_filhos; i++)
-    {
-        imprimirFilhos(pai->filhos[i]);
-    }
-}
-*/
-
 void exporta(void *arvore)
 {
-    No *pai = (No *)arvore;
-
-    //imprimirArestas(arvore);
-    //imprimirNos(arvore);
+    imprimirArestas(arvore);
+    imprimirNos(arvore);
 }
 
 void atualizarValor(No* no) 
