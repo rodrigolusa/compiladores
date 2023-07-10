@@ -37,13 +37,10 @@ extern void *arvore;
 %token TK_ERRO
 
 %type<no> programa
-%type<no> global
-%type<no> type
 %type<no> array
 %type<no> element
 %type<valor_lexico> literal
 %type<no> operando
-%type<no> vars
 %type<no> function
 %type<no> header
 %type<no> body
@@ -106,37 +103,30 @@ array:
                                 }
                                 $$ = $2;
                             }
-                        }
-                        | element {
+                        } ;
+
+array:                   element {
                             if($1 == NULL){
                                 $$ = $1;
                             } else{
                                 $$ = NULL;
                             }
-                        }
-                        ;
+                        } ;
 element:
                         function {
                             $$ = $1;
-                        } 
-                        | global {
+                        } ;
+element:                global {
                             $$ = NULL;
-                        }
-                        ;
+                        } ;
 
 
 // types
 type:
-                        TK_PR_INT {
-                            $$ = criarNo("int");
-                        }
-                        | TK_PR_FLOAT {
-                            $$ = criarNo("float");
-                        }
-                        | TK_PR_BOOL {
-                            $$ = criarNo("bool");
-                        }
-                        ;
+        TK_PR_INT
+        | TK_PR_FLOAT
+        | TK_PR_BOOL
+        ;
 
 literal:
                         TK_LIT_INT {
@@ -167,23 +157,13 @@ operando:
 
 // global
 global:
-                        type vars ';' {
-                            $$ = criarNo("global");
-                            adicionarFilho($$, $1);
-                            adicionarFilho($$, $2);
-                        }
-                        ;
+       type vars ';' ;
 
 
 // vars
 vars:
-                        vars ',' TK_IDENTIFICADOR {
-                            $$ = $1;
-                            adicionarFilho($$, criarNoTipoLexico($3));
-                        }
-                        | TK_IDENTIFICADOR {
-                            $$ = criarNoTipoLexico($1);
-                        }
+                        vars ',' TK_IDENTIFICADOR
+                        | TK_IDENTIFICADOR
                         ;
 
 function:
@@ -269,22 +249,22 @@ simple_command:
                     ;
 
 command_list:
-                        commands_block {
+                        commands_block ';' {
                             $$ = $1;
                         }
-                        | local_var_command {
+                        | local_var_command ';' {
                             $$ = $1;
                         }
-                        | set_command {
+                        | set_command  ';' {
                             $$ = $1;
                         }
                         | flow_control_command {
                             $$ = $1;
                         }
-                        | return_command {
+                        | return_command ';' {
                             $$ = $1;
                         }
-                        | function_call {
+                        | function_call ';' {
                             $$ = $1;
                         }
                         ;
@@ -293,7 +273,7 @@ command_list:
 local_var_command:
                         type local_vars_list {
                             $$ = $2;
-                        }
+                        } 
                         ;
 
 local_vars_list:
@@ -313,7 +293,7 @@ local_vars_list:
                         }
                         | local_var_list_complement {
                             $$ = $1;
-                        }
+                        } 
                         ;
 
 local_var_list_complement:
@@ -375,7 +355,7 @@ return_command:
 
 
 flow_control_command:
-    condicional | iterative;
+    condicional | iterative ';';
 
 //if
 condicional:
@@ -392,10 +372,10 @@ condicional:
 
 //else
 condicional_complement:
-                        TK_PR_ELSE commands_block {
+                        TK_PR_ELSE commands_block ';' {
                             $$ = $2;
                         }
-                        | {
+                        | ';' {
                             $$ = NULL;
                         }
                         ;
@@ -563,5 +543,5 @@ expr7:
 %%
 
 void yyerror(char const *s){
-	printf("%s at line %d UNEXPECTED token \"%s\" \n", s,get_line_number(), yytext);
+	printf("ERROR: %s [linha: %d token \"%s\"] \n\n", s,get_line_number(), yytext);
 }

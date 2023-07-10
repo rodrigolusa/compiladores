@@ -7,7 +7,7 @@ extern void exporta(void *arvore);
 
 No *criarNoTipoLexico(TipoLexico *valor_lexico)
 {
-    No *novo_nodo = (No *)malloc(sizeof(No));
+    No *novo_nodo = (No *) calloc(1, sizeof(No));
 
     novo_nodo->valor_lexico = valor_lexico;
     novo_nodo->n_filhos = 0;
@@ -19,7 +19,7 @@ No *criarNoTipoLexico(TipoLexico *valor_lexico)
 
 No *criarNo(char *valor)
 {
-    No *novo_nodo = (No *)malloc(sizeof(No));
+    No *novo_nodo = (No *) calloc(1, sizeof(No));
 
     novo_nodo->valor_lexico = NULL;
     novo_nodo->n_filhos = 0;
@@ -31,34 +31,53 @@ No *criarNo(char *valor)
 
 void adicionarFilho(No *pai, No *filho)
 {
-    pai->filhos = (No **)realloc(pai->filhos, (pai->n_filhos + 1) * sizeof(No *));
-    pai->filhos[pai->n_filhos] = filho;
-    pai->n_filhos++;
+    if (filho != NULL) {
+        if (pai->n_filhos == 0) {
+            size_t tamanhoNo = sizeof(struct astNo);
+            pai->filhos = malloc(tamanhoNo); // Assuming an initial size
+        } else {
+            size_t tamanhoNo = sizeof(struct astNo);
+            pai->filhos = realloc(pai->filhos, (pai->n_filhos + 1) * tamanhoNo);
+        }
+
+        pai->filhos[pai->n_filhos] = filho;
+        pai->n_filhos++;
+    }
 }
 
 void imprimirArestas(No *pai)
 {
-    for (int i = 0; i < pai->n_filhos; i++)
-    {
-        printf("%p, %p\n", pai, pai->filhos[i]);
-    }
+    int n_filhos = pai->n_filhos;
+    int i = 0;
 
-    for (int i = 0; i < pai->n_filhos; i++)
-    {
+    while (n_filhos > 0) {
+        printf("%p, %p\n", pai, pai->filhos[i]);
         imprimirArestas(pai->filhos[i]);
+        i++;
+        n_filhos--;
     }
 }
 
 void imprimirNos(No *pai)
 {
-    printf("%p [label=\"%s\"];\n", pai, pai->valor);
+    int n_filhos = pai->n_filhos;
+    int i = 0;
 
-    for (int i = 0; i < pai->n_filhos; i++)
-    {
+    int isIfElse = (strcmp(pai->valor, "condicional_complement") == 0);
+
+    if (isIfElse)
+        printf("%p [label=\"if\"];\n", pai);
+    else
+        printf("%p [label=\"%s\"];\n", pai, pai->valor);
+
+    while (n_filhos > 0) {
         imprimirNos(pai->filhos[i]);
+        i++;
+        n_filhos--;
     }
 }
 
+/*
 void imprimirFilhos(No *pai)
 {
     for (int i = 0; i < pai->n_filhos; i++)
@@ -66,24 +85,28 @@ void imprimirFilhos(No *pai)
         imprimirFilhos(pai->filhos[i]);
     }
 }
+*/
 
 void exporta(void *arvore)
 {
     No *pai = (No *)arvore;
 
-    imprimirArestas(arvore);
-    imprimirNos(arvore);
+    //imprimirArestas(arvore);
+    //imprimirNos(arvore);
 }
 
 void atualizarValor(No* no) 
 {
-    if (no->valor[0] == 'c' && strcmp(no->valor, "condicional") == 0)
-    {
+    if (strcmp(no->valor, "condicional") == 0) {
         strcpy(no->valor, "condicional_complement");
+        return;
     }
-    else if (no->valor_lexico->tipo == LEX_ID) 
-    {
-        strcat(no->valor, "call ");
+
+    if (no->valor_lexico != NULL && no->valor_lexico->tipo == LEX_ID) {
+        char dummy[TAMANHO_MAXIMO];
+        strcpy(dummy, "call ");
+	    strcat(dummy, no->valor);
+        strcpy(no->valor, dummy);
     }
 }
 

@@ -4,7 +4,8 @@
 #include <stdio.h>
 
 TipoLexico* criarTipoLexico(int linha, int tipo, char* valor) {
-    TipoLexico* novo_tipo_lexico = (TipoLexico*) malloc(sizeof(TipoLexico));
+    
+    TipoLexico* novo_tipo_lexico = (TipoLexico*) calloc(1, sizeof(TipoLexico));
 
     novo_tipo_lexico->linha = linha;
     novo_tipo_lexico->tipo = tipo;
