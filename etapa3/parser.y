@@ -98,12 +98,13 @@ array:
                             } else{
                                 if($2 != NULL){
                                     adicionarFilho($1, $2);                                   
+                                } else {
+                                    $$ = $1;
                                 }
-                                $$ = $1;
                             }
                         } 
                         | element {
-                            if($1 == NULL){
+                            if($1 != NULL){
                                 $$ = $1;
                             } else{
                                 $$ = NULL;
@@ -117,6 +118,29 @@ element:
                         | global {
                             $$ = NULL;
                         } ;
+
+
+function:
+                    header body {
+                        $$ = $1;
+                        adicionarFilho($$, $2);
+                    }
+                    ;
+
+header:
+                    TK_IDENTIFICADOR '(' param_list ')' TK_OC_MAP type {
+                        $$ = criarNoTipoLexico($1);
+                    }
+                    ;
+
+param_list:
+                    params | ;
+
+params:
+                    params ',' param | param ;
+
+param:
+                    type TK_IDENTIFICADOR ;
 
 type:
         TK_PR_INT
@@ -158,28 +182,6 @@ vars:
                         vars ',' TK_IDENTIFICADOR
                         | TK_IDENTIFICADOR
                         ;
-
-function:
-                    header body {
-                        $$ = $1;
-                        adicionarFilho($$, $2);
-                    }
-                    ;
-
-header:
-                    TK_IDENTIFICADOR '(' param_list ')' TK_OC_MAP type {
-                        $$ = criarNoTipoLexico($1);
-                    }
-                    ;
-
-param_list:
-                    params | ;
-
-params:
-                    params ',' param | param ;
-
-param:
-                    type TK_IDENTIFICADOR ;
 
 body:
                     commands_block {

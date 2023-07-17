@@ -16,5 +16,3 @@ arvore.o: arvore.c arvore.h tipolexico.h
 	gcc -c arvore.c
 clean:
 	rm *.o lex.yy.c parser.tab.c etapa3
-teste:
-	./etapa3 < input.txt > output.txt

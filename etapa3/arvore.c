@@ -47,40 +47,52 @@ void adicionarFilho(No *pai, No *filho)
 
 void imprimirArestas(No *pai)
 {
-    int n_filhos = pai->n_filhos;
+    int t_filhos = pai->n_filhos;
     int i = 0;
 
-    while (n_filhos > 0) {
+    while(t_filhos > 0) {
         printf("%p, %p\n", pai, pai->filhos[i]);
+	i++;
+	t_filhos--;
+    }
+
+    t_filhos = pai->n_filhos;
+    i = 0;
+
+    while(t_filhos > 0) {
         imprimirArestas(pai->filhos[i]);
-        i++;
-        n_filhos--;
+	i++;
+	t_filhos--;
     }
 }
 
 void imprimirNos(No *pai)
 {
-    int n_filhos = pai->n_filhos;
+    int t_filhos = pai->n_filhos;
     int i = 0;
 
-    int isIfElse = (strcmp(pai->valor, "condicional_complement") == 0);
-
-    if (isIfElse)
+    if(strcmp(pai->valor, "condicional") == 0)
         printf("%p [label=\"if\"];\n", pai);
     else
         printf("%p [label=\"%s\"];\n", pai, pai->valor);
 
-    while (n_filhos > 0) {
+    while(t_filhos > 0) {
         imprimirNos(pai->filhos[i]);
         i++;
-        n_filhos--;
+        t_filhos--;
     }
 }
 
 void exporta(void *arvore)
 {
-    imprimirArestas(arvore);
-    imprimirNos(arvore);
+    No *pai = (No*) arvore;
+    
+    if(arvore != NULL) {
+        imprimirArestas(arvore);
+        printf("\n\n");
+        imprimirNos(arvore);
+    }
+    
 }
 
 void atualizarValor(No* no) 
