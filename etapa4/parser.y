@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "arvore.h"
-#include "tabeladesimbolos.h"
 
 int yylex(void);
 void yyerror (char const *s);
@@ -44,6 +43,7 @@ extern void *arvore;
 %type<no> operando
 %type<no> function
 %type<no> header
+%type<valor_lexico> empilha_tabela
 %type<no> param
 %type<no> type
 %type<no> global
@@ -90,7 +90,7 @@ extern void *arvore;
 
 programa:
                         cria_tabela array { 
-                            arvore = $1; 
+                            arvore = $2; 
                             } 
                         | { 
                             arvore = NULL; 
@@ -147,6 +147,8 @@ header:
                     ;
 empilha_tabela:
                     TK_IDENTIFICADOR {
+                        $$ = $1;
+                        
                         // Procura na tabela
                         // 1.1. Reporta err_declared
                         // 1.2. Empilha na tabela
@@ -288,7 +290,7 @@ simple_command:
 
 command_list:
                         empilha_tabela commands_block ';' {
-                            $$ = $1;
+                            $$ = $2;
                         }
                         | local_var_command ';' {
                             $$ = $1;
@@ -413,9 +415,9 @@ condicional:
                         TK_PR_IF '(' expr ')' empilha_tabela commands_block condicional_complement {
                             $$ = criarNo("condicional", tIndefinido);
                             adicionarFilho($$, $3);
-                            adicionarFilho($$, $5);
                             adicionarFilho($$, $6);
-                            if($6 != NULL){
+                            adicionarFilho($$, $7);
+                            if($7 != NULL){
                                 atualizarValor($$);
                             }
                         }
@@ -424,7 +426,7 @@ condicional:
 //else
 condicional_complement:
                         TK_PR_ELSE empilha_tabela commands_block ';' {
-                            $$ = $2;
+                            $$ = $3;
                         }
                         | ';' {
                             $$ = NULL;
@@ -436,7 +438,7 @@ iterative:
                         TK_PR_WHILE '(' expr ')' empilha_tabela commands_block {
                             $$ = criarNo("iterative", tIndefinido);
                             adicionarFilho($$, $3);
-                            adicionarFilho($$, $5);
+                            adicionarFilho($$, $6);
                         }
                         ;
 
