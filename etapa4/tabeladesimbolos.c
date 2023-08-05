@@ -17,10 +17,10 @@ TDS *criarTabela()
 
 void deletaTabela(TDS *tabela)
 {
-  TDS *tabela_anterior = tabela->anterior;
+  TDS *tabela_anterior = tabela->tabela_anterior;
 
   if (tabela_anterior != NULL) {
-    tabela_anterior->posterior = NULL;
+    tabela_anterior->tabela_posterior = NULL;
   }
 
   free(tabela);
@@ -29,7 +29,7 @@ void deletaTabela(TDS *tabela)
 void adicionarLinha(TDS *tabela, Simbolo *linha)
 {
   tabela->simbolos = realloc(tabela->simbolos, (tabela->linhas + 1) * sizeof(Simbolo));
-  tabela->simbolos[tabela->linhas] = linha;
+  tabela->simbolos[tabela->linhas] = *linha;
   tabela->linhas = tabela->linhas + 1;
 }
 
@@ -50,8 +50,8 @@ TDS* adicionarTabela(TDS *tabela)
 char *consultarTabela(TDS *tabela, char *identificador)
 {
   for(int i = 0; i < tabela->linhas; i++) {
-    if(strcmp(identificador, tabela->simbolos[i]) == 0) {
-      return tabela->simbolos[i]->valor;
+    if(strcmp(identificador, tabela->simbolos[i].identificador) == 0) {
+      return tabela->simbolos[i].valor;
     }
   }
   

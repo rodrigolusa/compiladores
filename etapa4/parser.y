@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "arvore.h"
+#include "tabeladesimbolos.h"
 
 int yylex(void);
 void yyerror (char const *s);
@@ -88,12 +89,17 @@ extern void *arvore;
 %%
 
 programa:
-                        array { 
+                        cria_tabela array { 
                             arvore = $1; 
                             } 
                         | { 
                             arvore = NULL; 
                             }
+                        ;
+cria_tabela:           
+                        {
+                            // Cria a tabela
+                        }
                         ;
 array: 
                         element array {
@@ -132,12 +138,20 @@ function:
                     ;
 
 header:
-                    TK_IDENTIFICADOR '(' param_list ')' TK_OC_MAP type {
+                    empilha_tabela '(' param_list ')' TK_OC_MAP type {
                         No *folha = $6;
                         $$ = criarNoTipoLexico($1, folha->tipo);
+
+                        // Volta uma tabela e adiciona o simbolo da função
                     }
                     ;
-
+empilha_tabela:
+                    TK_IDENTIFICADOR {
+                        // Procura na tabela
+                        // 1.1. Reporta err_declared
+                        // 1.2. Empilha na tabela
+                    }
+                    ;
 param_list:
                     params | ;
 
@@ -148,6 +162,10 @@ param:
                     type TK_IDENTIFICADOR { 
                         No *folha = $1;
                         $$ = criarNoTipoLexico($2, folha->tipo);
+
+                        // Procura na tabela
+                        // 1.1. Reporta err_declared
+                        // 1.2. Adicionar simbolo na tabela
                     }
                     ;
 
@@ -196,6 +214,10 @@ global:
             $$ = $2;
             No *folha = $1;
             atualizarTipo($$, folha->tipo);
+
+            // Procura na tabela
+            // 1.1. Reporta err_declared
+            // 1.2. Adiciona na tabela todos os vars
         }
         ;
 
@@ -265,7 +287,7 @@ simple_command:
                     ;
 
 command_list:
-                        commands_block ';' {
+                        empilha_tabela commands_block ';' {
                             $$ = $1;
                         }
                         | local_var_command ';' {
@@ -290,7 +312,10 @@ local_var_command:
                             $$ = $2;
                             No *folha = $1;
                             atualizarTipo($$, folha->tipo);
-                            
+
+                            // Procura na tabela
+                            // 1.1. Reporta err_declared
+                            // 1.2. Adiciona na tabela todos os local_vars_list
                         } 
                         ;
 
@@ -327,6 +352,11 @@ set_command:
                             // Tipo avaliado pela tabela
                             adicionarFilho($$, criarNoTipoLexico($1, tIndefinido));
                             adicionarFilho($$, $3);
+
+                            // Procura na Tabela
+                            // 1.1. Reporta err_undeclared (caso não encontrado)
+                            // 1.2. Reporta err_function (caso encontrado e ser uma função)
+                            // 1.3. Configura na Tabela
                         }
                         ;
 
@@ -336,6 +366,11 @@ function_call:
                             $$ = criarNoTipoLexico($1, tIndefinido);
                             atualizarValor($$);
                             adicionarFilho($$, $3);
+
+                            // Procura na tabela
+                            // 1.1. Reporta err_undeclared (caso não encontrado)
+                            // 1.2. Reporta err_variable (caso encontrado e ser uma variável)
+                            // 1.3. Abre tabela e seta argumentos
                         }
                         ;
 
@@ -364,6 +399,7 @@ arg:
 
 return_command:
                         TK_PR_RETURN expr {
+                            // Verifica na tabela
                             $$ = criarNo("return", tIndefinido);
                             adicionarFilho($$, $2);
                         }
@@ -374,7 +410,7 @@ flow_control_command:
 
 //if
 condicional:
-                        TK_PR_IF '(' expr ')' commands_block condicional_complement {
+                        TK_PR_IF '(' expr ')' empilha_tabela commands_block condicional_complement {
                             $$ = criarNo("condicional", tIndefinido);
                             adicionarFilho($$, $3);
                             adicionarFilho($$, $5);
@@ -387,7 +423,7 @@ condicional:
 
 //else
 condicional_complement:
-                        TK_PR_ELSE commands_block ';' {
+                        TK_PR_ELSE empilha_tabela commands_block ';' {
                             $$ = $2;
                         }
                         | ';' {
@@ -397,7 +433,7 @@ condicional_complement:
 
 //while
 iterative:
-                        TK_PR_WHILE '(' expr ')' commands_block {
+                        TK_PR_WHILE '(' expr ')' empilha_tabela commands_block {
                             $$ = criarNo("iterative", tIndefinido);
                             adicionarFilho($$, $3);
                             adicionarFilho($$, $5);
