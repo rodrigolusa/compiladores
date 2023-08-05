@@ -1,10 +1,10 @@
 #include "tipolexico.h"
 
 enum tipo {
-    tINT, 
-    tFLOAT, 
+    tIndefinido,
     tBOOL,
-    tIndefinido
+    tINT, 
+    tFLOAT
 };
 
 typedef struct astNo

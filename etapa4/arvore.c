@@ -82,7 +82,7 @@ void imprimirNos(No *pai)
 {
     int t_filhos = pai->n_filhos;
     int i = 0;
-    static char* tipo[] = { "int", "float", "bool", "indefinido" };
+    static char* tipo[] = { "indefinido", "bool", "int", "float" };
 
     if(strcmp(pai->valor, "condicional") == 0)
         printf("%p [label=\"if - %s\"];\n", pai, tipo[pai->tipo]);

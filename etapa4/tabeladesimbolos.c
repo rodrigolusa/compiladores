@@ -33,7 +33,7 @@ void adicionarLinha(TDS *tabela, Simbolo *linha)
   tabela->linhas = tabela->linhas + 1;
 }
 
-void adicionarTabela(TDS *tabela)
+TDS* adicionarTabela(TDS *tabela)
 {
   TDS *nova_tabela = (TDS *) calloc(1, sizeof(TDS));
 
