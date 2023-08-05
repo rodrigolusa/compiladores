@@ -5,11 +5,12 @@
 
 extern void exporta(void *arvore);
 
-No *criarNoTipoLexico(TipoLexico *valor_lexico)
+No *criarNoTipoLexico(TipoLexico *valor_lexico, int tipo)
 {
     No *novo_nodo = (No *) calloc(1, sizeof(No));
 
     novo_nodo->valor_lexico = valor_lexico;
+    novo_nodo->tipo = tipo;
     novo_nodo->n_filhos = 0;
     novo_nodo->filhos = NULL;
     strcpy(novo_nodo->valor, valor_lexico->valor);
@@ -17,11 +18,12 @@ No *criarNoTipoLexico(TipoLexico *valor_lexico)
     return novo_nodo;
 }
 
-No *criarNo(char *valor)
+No *criarNo(char *valor, int tipo)
 {
     No *novo_nodo = (No *) calloc(1, sizeof(No));
 
     novo_nodo->valor_lexico = NULL;
+    novo_nodo->tipo = tipo;
     novo_nodo->n_filhos = 0;
     novo_nodo->filhos = NULL;
     strcpy(novo_nodo->valor, valor);
@@ -70,11 +72,12 @@ void imprimirNos(No *pai)
 {
     int t_filhos = pai->n_filhos;
     int i = 0;
+    static char* tipo[] = { "int", "float", "bool", "indefinido" };
 
     if(strcmp(pai->valor, "condicional") == 0)
-        printf("%p [label=\"if\"];\n", pai);
+        printf("%p [label=\"if - %s\"];\n", pai, tipo[pai->tipo]);
     else
-        printf("%p [label=\"%s\"];\n", pai, pai->valor);
+        printf("%p [label=\"%s - %s\"];\n", pai, pai->valor, tipo[pai->tipo]);
 
     while(t_filhos > 0) {
         imprimirNos(pai->filhos[i]);

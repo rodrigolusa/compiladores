@@ -39,10 +39,13 @@ extern void *arvore;
 %type<no> programa
 %type<no> array
 %type<no> element
-%type<valor_lexico> literal
+%type<no> literal
 %type<no> operando
 %type<no> function
 %type<no> header
+%type<no> param
+%type<no> type
+%type<no> vars
 %type<no> body
 %type<no> commands_block
 %type<no> simple_command
@@ -129,7 +132,8 @@ function:
 
 header:
                     TK_IDENTIFICADOR '(' param_list ')' TK_OC_MAP type {
-                        $$ = criarNoTipoLexico($1);
+                        No *folha = $6;
+                        $$ = criarNoTipoLexico($1, folha->tipo);
                     }
                     ;
 
@@ -140,35 +144,46 @@ params:
                     params ',' param | param ;
 
 param:
-                    type TK_IDENTIFICADOR ;
+                    type TK_IDENTIFICADOR { 
+                        No *folha = $1;
+                        $$ = criarNoTipoLexico($2, folha->tipo);
+                    }
+                    ;
 
 type:
-        TK_PR_INT
-        | TK_PR_FLOAT
-        | TK_PR_BOOL
+        TK_PR_INT {
+            $$ = criarNo("int", tINT); 
+        }
+        | TK_PR_FLOAT {
+            $$ = criarNo("float", tFLOAT);
+        }
+        | TK_PR_BOOL {
+            $$ = criarNo("bool", tBOOL);
+        }
         ;
 
 literal:
                         TK_LIT_INT {
-                            $$ = $1;
+                            $$ = criarNoTipoLexico($1, tINT);
                         } 
                         | TK_LIT_FLOAT {
-                            $$ = $1;
+                            $$ = criarNoTipoLexico($1, tFLOAT);
                         } 
                         | TK_LIT_TRUE {
-                            $$ = $1;
+                            $$ = criarNoTipoLexico($1, tBOOL);
                         } 
                         | TK_LIT_FALSE{
-                            $$ = $1;
+                            $$ = criarNoTipoLexico($1, tBOOL);
                         } 
                         ;
 
 operando:
                         TK_IDENTIFICADOR {
-                            $$ = criarNoTipoLexico($1);
+                            // Tipo avaliado pela tabela
+                            $$ = criarNoTipoLexico($1, tIndefinido);
                         }
                         | literal {
-                            $$ = criarNoTipoLexico($1);
+                            $$ = $1;
                         }
                         | function_call {
                             $$ = NULL;
@@ -176,11 +191,20 @@ operando:
                         ;
 
 global:
-       type vars ';' ;
+        type vars ';' {
+            // No *folha = $1;
+            // atualizarTipo($2, folha->tipo);
+        }
+        ;
 
 vars:
-                        vars ',' TK_IDENTIFICADOR
-                        | TK_IDENTIFICADOR
+                        vars ',' TK_IDENTIFICADOR {
+                            $$ = $1;
+                            adicionarFilho($$, criarNoTipoLexico($3, tIndefinido));
+                        }
+                        | TK_IDENTIFICADOR {
+                            $$ = criarNoTipoLexico($1, tIndefinido);
+                        }
                         ;
 
 body:
@@ -262,23 +286,24 @@ command_list:
 local_var_command:
                         type local_vars_list {
                             $$ = $2;
+
+                            // No *folha = $6;
+                            // atualizarTipo($$, folha->tipo);
+                            
                         } 
                         ;
 
 local_vars_list:
                         TK_IDENTIFICADOR ',' local_vars_list {
-                            if($3 == NULL){
-                                $$ = NULL;
-                            } else{
-                                $$ = $3;
-                            }
+                            $$ = criarNoTipoLexico($1, tIndefinido);
+                            adicionarFilho($$, $3);
                         }
                         | local_var_list_complement ',' local_vars_list {
-                            adicionarFilho($1, $3);
                             $$ = $1;
+                            adicionarFilho($$, $3);
                         }
                         | TK_IDENTIFICADOR {
-                            $$ = NULL;
+                            $$ = criarNoTipoLexico($1, tIndefinido);
                         }
                         | local_var_list_complement {
                             $$ = $1;
@@ -287,23 +312,27 @@ local_vars_list:
 
 local_var_list_complement:
                         TK_IDENTIFICADOR TK_OC_LE literal {
-                            $$ = criarNo("<=");
-                            adicionarFilho($$, criarNoTipoLexico($1));
-                            adicionarFilho($$, criarNoTipoLexico($3));
+                            No *folha = $3;
+                            $$ = criarNo("<=", tIndefinido);
+                            adicionarFilho($$, criarNoTipoLexico($1, tIndefinido));
+                            adicionarFilho($$, $3);
                         }
                         ;
 
 set_command:
                         TK_IDENTIFICADOR '=' expr {
-                            $$ = criarNo("=");
-                            adicionarFilho($$, criarNoTipoLexico($1));
+                            No *folha = $3;
+                            $$ = criarNo("=", tIndefinido);
+                            // Tipo avaliado pela tabela
+                            adicionarFilho($$, criarNoTipoLexico($1, tIndefinido));
                             adicionarFilho($$, $3);
                         }
                         ;
 
 function_call:
                         TK_IDENTIFICADOR '(' args_list ')' {
-                            $$ = criarNoTipoLexico($1);
+                            // Tipo avaliado pela tabela
+                            $$ = criarNoTipoLexico($1, tIndefinido);
                             atualizarValor($$);
                             adicionarFilho($$, $3);
                         }
@@ -334,7 +363,7 @@ arg:
 
 return_command:
                         TK_PR_RETURN expr {
-                            $$ = criarNo("return");
+                            $$ = criarNo("return", tIndefinido);
                             adicionarFilho($$, $2);
                         }
                         ;
@@ -345,7 +374,7 @@ flow_control_command:
 //if
 condicional:
                         TK_PR_IF '(' expr ')' commands_block condicional_complement {
-                            $$ = criarNo("condicional");
+                            $$ = criarNo("condicional", tIndefinido);
                             adicionarFilho($$, $3);
                             adicionarFilho($$, $5);
                             adicionarFilho($$, $6);
@@ -368,7 +397,7 @@ condicional_complement:
 //while
 iterative:
                         TK_PR_WHILE '(' expr ')' commands_block {
-                            $$ = criarNo("iterative");
+                            $$ = criarNo("iterative", tIndefinido);
                             adicionarFilho($$, $3);
                             adicionarFilho($$, $5);
                         }
@@ -376,67 +405,67 @@ iterative:
 
 opG0:
                         '-' {
-                            $$ = criarNo("-");
+                            $$ = criarNo("-", tIndefinido);
                         }
                         | '!' {
-                            $$ = criarNo("!");
+                            $$ = criarNo("!", tIndefinido);
                         }
                         ;
 
 opG1:
                         '*' {
-                            $$ = criarNo("*");
+                            $$ = criarNo("*", tIndefinido);
                         }
                         | '/' {
-                            $$ = criarNo("/");
+                            $$ = criarNo("/", tIndefinido);
                         }
                         | '%' {
-                            $$ = criarNo("%");
+                            $$ = criarNo("%", tIndefinido);
                         }
                         ;
 
 opG2:
                         '+' {
-                            $$ = criarNo("+");
+                            $$ = criarNo("+", tIndefinido);
                         }
                         | '-' {
-                            $$ = criarNo("-");
+                            $$ = criarNo("-", tIndefinido);
                         }
                         ;
 
 opG3:
                         '<' {
-                            $$ = criarNo("<");
+                            $$ = criarNo("<", tIndefinido);
                         }
                         | '>' {
-                            $$ = criarNo(">");
+                            $$ = criarNo(">", tIndefinido);
                         }
                         | TK_OC_LE {
-                            $$ = criarNo("<=");
+                            $$ = criarNo("<=", tIndefinido);
                         }
                         | TK_OC_GE {
-                            $$ = criarNo(">=");
+                            $$ = criarNo(">=", tIndefinido);
                         }
                         ;
 
 opG4:
                         TK_OC_EQ {
-                            $$ = criarNo("==");
+                            $$ = criarNo("==", tIndefinido);
                         }
                         | TK_OC_NE {
-                            $$ = criarNo("!=");
+                            $$ = criarNo("!=", tIndefinido);
                         }
                         ;
 
 opAnd:
                         TK_OC_AND {
-                            $$ = criarNo("&");
+                            $$ = criarNo("&", tIndefinido);
                         }
                         ;
                         
 opOr:
                         TK_OC_OR {
-                            $$ = criarNo("|");
+                            $$ = criarNo("|", tIndefinido);
                         }
                         ;
 

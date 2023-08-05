@@ -9,7 +9,7 @@ enum natureza {
 enum tipo {
     tINT, 
     tFLOAT, 
-    tBOOL, 
+    tBOOL
 };
 
 typedef struct Simbolo
