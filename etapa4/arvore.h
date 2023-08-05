@@ -22,4 +22,5 @@ void adicionarFilho(No *pai, No *filho);
 void imprimirArestas(No *pai);
 void imprimirNos(No *pai);
 void atualizarValor(No *no);
+void atualizarTipo(No *no, int tipo);
 int verificaValor(No *no, char *val);

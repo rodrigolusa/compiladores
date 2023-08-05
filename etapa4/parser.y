@@ -45,6 +45,7 @@ extern void *arvore;
 %type<no> header
 %type<no> param
 %type<no> type
+%type<no> global
 %type<no> vars
 %type<no> body
 %type<no> commands_block
@@ -192,8 +193,9 @@ operando:
 
 global:
         type vars ';' {
-            // No *folha = $1;
-            // atualizarTipo($2, folha->tipo);
+            $$ = $2;
+            No *folha = $1;
+            atualizarTipo($$, folha->tipo);
         }
         ;
 
@@ -286,9 +288,8 @@ command_list:
 local_var_command:
                         type local_vars_list {
                             $$ = $2;
-
-                            // No *folha = $6;
-                            // atualizarTipo($$, folha->tipo);
+                            No *folha = $1;
+                            atualizarTipo($$, folha->tipo);
                             
                         } 
                         ;

@@ -31,6 +31,16 @@ No *criarNo(char *valor, int tipo)
     return novo_nodo;
 }
 
+void atualizarTipo(No *no, int tipo)
+{
+    no->tipo = tipo;
+    if(no->n_filhos != 0) {
+        for(int i=0; i<no->n_filhos; i++) {
+            atualizarTipo(no->filhos[i], tipo);
+        }
+    }
+}
+
 void adicionarFilho(No *pai, No *filho)
 {
     if (filho != NULL) {
