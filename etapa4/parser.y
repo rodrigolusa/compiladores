@@ -1,16 +1,17 @@
 %{
-/*Grupo P -> João Carlos Almeida da Silva - Rodrigo Antonio Rezende Lusa*/
+// Grupo P -> João Carlos Almeida da Silva - Rodrigo Antonio Rezende Lusa
 
 #include <stdlib.h>
 #include <stdio.h>
-#include "arvore.h"
+#include "escopo.h"
 
 int yylex(void);
 void yyerror (char const *s);
 extern int get_line_number (void);
 extern char *yytext;
 extern void *arvore;
-
+Escopo* pilhaEscopo = NULL;
+ListaChavesSimbolo* listaChaves = NULL;
 %}
 
 %define parse.error verbose
@@ -43,11 +44,7 @@ extern void *arvore;
 %type<no> operando
 %type<no> function
 %type<no> header
-%type<valor_lexico> empilha_tabela
-%type<no> param
-%type<no> type
-%type<no> global
-%type<no> vars
+%type<no> fun_name
 %type<no> body
 %type<no> commands_block
 %type<no> simple_command
@@ -88,168 +85,276 @@ extern void *arvore;
 
 %%
 
+inicio: abre_escopo programa fecha_escopo ;
+
+abre_escopo:
+            {
+                pilhaEscopo = criarTabela(pilhaEscopo);
+            } ;
+
+fecha_escopo:       
+            {
+                pilhaEscopo = desempilharTabela(pilhaEscopo);
+            } ;
+
 programa:
-                        cria_tabela array { 
-                            arvore = $2; 
-                            } 
-                        | { 
-                            arvore = NULL; 
-                            }
-                        ;
-cria_tabela:           
-                        {
-                            // Cria a tabela
-                        }
-                        ;
+            array 
+            { 
+                arvore = $1; 
+            } 
+            | { 
+                arvore = NULL; 
+                }
+            ;
 array: 
-                        element array {
-                            if($1 == NULL){
-                                $$ = $2;
-                            } else{
-                                if($2 != NULL){
-                                    adicionarFilho($1, $2);                                   
-                                } else {
-                                    $$ = $1;
-                                }
-                            }
-                        } 
-                        | element {
-                            if($1 != NULL){
-                                $$ = $1;
-                            } else{
-                                $$ = NULL;
-                            }
-                        } ;
+        element array 
+        {
+            if($1 == NULL)
+            {
+                $$ = $2;
+            } 
+            else
+            {
+                if($2 != NULL)
+                {
+                    adicionarFilho($1, $2);
+                    $$ = $1;                                 
+                } 
+                else 
+                {
+                    $$ = $1;
+                }
+            }
+        } 
+        | element 
+        {
+            if($1 != NULL)
+            {
+                $$ = $1;
+            } 
+            else
+            {
+                $$ = NULL;
+            }
+        } ;
 
 element:
-                        function {
-                            $$ = $1;
-                        } 
-                        | global {
-                            $$ = NULL;
-                        } ;
-
+        function 
+        {
+            $$ = $1;
+        } 
+        | global 
+        {
+            $$ = NULL;
+        } ;
 
 function:
-                    header body {
-                        $$ = $1;
-                        adicionarFilho($$, $2);
-                    }
-                    ;
+            header TK_OC_MAP TK_PR_FLOAT body fecha_escopo 
+            {
+                    $$ = $1; adicionarFilho($$, $4); 
+                    definirTipo($$, TYPE_FLOAT);
+                    ChaveSimbolo* chave = criarNomeChave($1->valor);
+                    ConteudoTabela* conteudo = procurarNaPilhaDeTabelas(chave, pilhaEscopo, FUN_SYMBOL, get_line_number());
+                    atualizarTipoConteudo(conteudo, TYPE_FLOAT); 
+            } ;
+            |  header TK_OC_MAP TK_PR_INT body fecha_escopo 
+            {
+                    $$ = $1; adicionarFilho($$, $4); definirTipo($$, TYPE_INT);
+                    ChaveSimbolo* chave = criarNomeChave($1->valor);
+                    ConteudoTabela* conteudo = procurarNaPilhaDeTabelas(chave, pilhaEscopo, FUN_SYMBOL, get_line_number());
+                    atualizarTipoConteudo(conteudo, TYPE_INT);                             
+            } ;
+            | header TK_OC_MAP TK_PR_BOOL body fecha_escopo 
+            {
+                    $$ = $1; 
+                    adicionarFilho($$, $4); 
+                    definirTipo($$, TYPE_BOOL);
+                    ChaveSimbolo* chave = criarNomeChave($1->valor);
+                    ConteudoTabela* conteudo = procurarNaPilhaDeTabelas(chave, pilhaEscopo, FUN_SYMBOL, get_line_number());
+                    atualizarTipoConteudo(conteudo, TYPE_BOOL);
+            } ;
 
-header:
-                    empilha_tabela '(' param_list ')' TK_OC_MAP type {
-                        No *folha = $6;
-                        $$ = criarNoTipoLexico($1, folha->tipo);
+header: 
+        fun_name abre_escopo header_params 
+        { 
+            $$ = $1;
+            ChaveSimbolo* chave = criarNomeChave($1->valor);
+            ConteudoTabela* conteudo = procurarNaTabela(chave, pilhaEscopo->escopoAnterior);
+            definirListaParametros(conteudo, listaChaves); 
+            listaChaves = NULL;
+        } ; 
 
-                        // Volta uma tabela e adiciona o simbolo da função
-                    }
-                    ;
-empilha_tabela:
-                    TK_IDENTIFICADOR {
-                        $$ = $1;
-                        
-                        // Procura na tabela
-                        // 1.1. Reporta err_declared
-                        // 1.2. Empilha na tabela
-                    }
-                    ;
+fun_name: 
+        TK_IDENTIFICADOR 
+        {
+            $$ = criarNoTipoLexico($1); 
+            ChaveSimbolo* chave = criarNomeChave($1->valor);
+            ConteudoTabela* conteudo =   novoConteudo(chave, $1->valor, get_line_number(), FUN_SYMBOL, TYPE_UNDEFINED); 
+            adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
+        } ;
+
+header_params: '(' param_list ')' ;
+
 param_list:
-                    params | ;
+            params | ;
 
 params:
-                    params ',' param | param ;
+        params ',' param | param ;
 
 param:
-                    type TK_IDENTIFICADOR { 
-                        No *folha = $1;
-                        $$ = criarNoTipoLexico($2, folha->tipo);
+        TK_PR_INT TK_IDENTIFICADOR 
+        {
+            ChaveSimbolo* chave = criarNomeChave($2->valor);
+            ConteudoTabela* conteudo = novoConteudo(chave, $2->valor, get_line_number(), ID_SYMBOL, TYPE_INT); 
+            adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
+            adicionarChaveNaLista(chave->nomeChave, &listaChaves, TYPE_INT, NULL);
+        } ;
+        | TK_PR_FLOAT TK_IDENTIFICADOR 
+        {
+            ChaveSimbolo* chave = criarNomeChave($2->valor);
+            ConteudoTabela* conteudo = novoConteudo(chave, $2->valor, get_line_number(), ID_SYMBOL, TYPE_FLOAT); 
+            adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
+            adicionarChaveNaLista(chave->nomeChave, &listaChaves, TYPE_FLOAT, NULL);
+        } ;
+        | TK_PR_BOOL TK_IDENTIFICADOR 
+        {
+            ChaveSimbolo* chave = criarNomeChave($2->valor);
+            ConteudoTabela* conteudo = novoConteudo(chave, $2->valor, get_line_number(), ID_SYMBOL, TYPE_BOOL); 
+            adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
+            adicionarChaveNaLista(chave->nomeChave, &listaChaves, TYPE_BOOL, NULL); 
+        } ;
 
-                        // Procura na tabela
-                        // 1.1. Reporta err_declared
-                        // 1.2. Adicionar simbolo na tabela
-                    }
-                    ;
+literal: 
+        TK_LIT_INT
+        { 
+            $$ = criarNoTipoLexico($1);
+            ChaveSimbolo* chave = criarNomeChave($1->valor);
+            ConteudoTabela* conteudo = novoConteudo(chave, $1->valor, get_line_number(), LIT_SYMBOL, TYPE_INT);
+            adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
+            definirTipo($$, TYPE_INT); 
+        } ;
 
-type:
-        TK_PR_INT {
-            $$ = criarNo("int", tINT); 
-        }
-        | TK_PR_FLOAT {
-            $$ = criarNo("float", tFLOAT);
-        }
-        | TK_PR_BOOL {
-            $$ = criarNo("bool", tBOOL);
-        }
-        ;
+literal: 
+        TK_LIT_FLOAT
+        { 
+            $$ = criarNoTipoLexico($1);
+            ChaveSimbolo* chave = criarNomeChave($1->valor);
+            ConteudoTabela* conteudo = novoConteudo(chave, $1->valor, get_line_number(), LIT_SYMBOL, TYPE_FLOAT);
+            adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
+            definirTipo($$, TYPE_FLOAT); 
+        } ;
 
-literal:
-                        TK_LIT_INT {
-                            $$ = criarNoTipoLexico($1, tINT);
-                        } 
-                        | TK_LIT_FLOAT {
-                            $$ = criarNoTipoLexico($1, tFLOAT);
-                        } 
-                        | TK_LIT_TRUE {
-                            $$ = criarNoTipoLexico($1, tBOOL);
-                        } 
-                        | TK_LIT_FALSE{
-                            $$ = criarNoTipoLexico($1, tBOOL);
-                        } 
-                        ;
+literal: 
+        TK_LIT_TRUE
+        { 
+            $$ = criarNoTipoLexico($1);
+            ChaveSimbolo* chave = criarNomeChave($1->valor);
+            ConteudoTabela* conteudo = novoConteudo(chave, $1->valor, get_line_number(), LIT_SYMBOL, TYPE_BOOL);
+            adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
+            definirTipo($$, TYPE_BOOL); 
+        } ;
+
+literal: 
+    TK_LIT_FALSE
+    {
+        $$ = criarNoTipoLexico($1);
+        ChaveSimbolo* chave = criarNomeChave($1->valor);
+        ConteudoTabela* conteudo = novoConteudo(chave, $1->valor, get_line_number(), LIT_SYMBOL, TYPE_BOOL);
+        adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
+        definirTipo($$, TYPE_BOOL); 
+    } ;
 
 operando:
-                        TK_IDENTIFICADOR {
-                            // Tipo avaliado pela tabela
-                            $$ = criarNoTipoLexico($1, tIndefinido);
-                        }
-                        | literal {
-                            $$ = $1;
-                        }
-                        | function_call {
-                            $$ = NULL;
-                        }
-                        ;
+            TK_IDENTIFICADOR 
+            {
+                $$ = criarNoTipoLexico($1); 
+                ChaveSimbolo* chave = criarNomeChave($1->valor); 
+                ConteudoTabela* conteudo = procurarNaPilhaDeTabelas(chave, pilhaEscopo, ID_SYMBOL, get_line_number());
+                definirTipo($$, conteudo->tipo); 
+            }
+            | literal 
+            {
+                $$ = $1; 
+            }
+            | function_call 
+            {
+                $$ = $1; 
+            }
+            ;
 
-global:
-        type vars ';' {
-            $$ = $2;
-            No *folha = $1;
-            atualizarTipo($$, folha->tipo);
+global: 
+        TK_PR_BOOL vars ';' 
+        {   
+            while(listaChaves != NULL) 
+            {                             
+                ChaveSimbolo* chave = criarNomeChave(listaChaves->chave.nomeChave);
+                ConteudoTabela* conteudo = novoConteudo(chave, "0", get_line_number(), ID_SYMBOL, TYPE_BOOL); 
+                adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
+                listaChaves = listaChaves->proximo;
+            }
+            listaChaves = NULL;
+        } ;
 
-            // Procura na tabela
-            // 1.1. Reporta err_declared
-            // 1.2. Adiciona na tabela todos os vars
+
+global: 
+        TK_PR_INT vars ';' 
+        {   
+            while(listaChaves != NULL) 
+            {                             
+                ChaveSimbolo* chave = criarNomeChave(listaChaves->chave.nomeChave);
+                ConteudoTabela* conteudo = novoConteudo(chave, "0", get_line_number(), ID_SYMBOL, TYPE_INT); 
+                adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
+                listaChaves = listaChaves->proximo;
+            }
+            listaChaves = NULL;
+        } ;
+
+
+global: 
+        TK_PR_FLOAT vars ';' 
+        {   
+            while(listaChaves != NULL) 
+            {                             
+                ChaveSimbolo* chave = criarNomeChave(listaChaves->chave.nomeChave);
+                ConteudoTabela* conteudo = novoConteudo(chave, "0", get_line_number(), ID_SYMBOL, TYPE_FLOAT); 
+                adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
+                listaChaves = listaChaves->proximo;                                                              
+            }
+            listaChaves = NULL;
+        } ;
+
+vars:
+        vars ',' TK_IDENTIFICADOR 
+        {
+                adicionarChaveNaLista($3->valor, &listaChaves, TYPE_UNDEFINED, NULL); 
+        }
+        | TK_IDENTIFICADOR 
+        {
+                adicionarChaveNaLista($1->valor, &listaChaves, TYPE_UNDEFINED, NULL); 
         }
         ;
 
-vars:
-                        vars ',' TK_IDENTIFICADOR {
-                            $$ = $1;
-                            adicionarFilho($$, criarNoTipoLexico($3, tIndefinido));
-                        }
-                        | TK_IDENTIFICADOR {
-                            $$ = criarNoTipoLexico($1, tIndefinido);
-                        }
-                        ;
-
 body:
-                    commands_block {
-                        $$ = $1;
-                    }
-                    ;
+        commands_block 
+        {
+            $$ = $1;
+        }
+        ;
 
 commands_block:
-                    '{' simple_command '}' {
-                        $$ = $2;
-                    }
-                    | '{' '}' {
-                        $$ = NULL;
-                    }
-                    ;
+                '{' simple_command '}' 
+                {
+                    $$ = $2;
+                }
+                | '{' '}' 
+                {
+                    $$ = NULL;
+                }
+                ;
 
 simple_command:
-                    command_list simple_command {
+                    command_list simple_command 
+                    {
                         if($1 == NULL) 
                         { 
                             $$ = $2; 
@@ -277,7 +382,8 @@ simple_command:
                             } 
                         } 
                     }
-                    | command_list {
+                    | command_list 
+                    {
                         if($1 != NULL)
                         {
                             $$ = $1;
@@ -289,309 +395,464 @@ simple_command:
                     ;
 
 command_list:
-                        empilha_tabela commands_block ';' {
-                            $$ = $2;
-                        }
-                        | local_var_command ';' {
-                            $$ = $1;
-                        }
-                        | set_command  ';' {
-                            $$ = $1;
-                        }
-                        | flow_control_command {
-                            $$ = $1;
-                        }
-                        | return_command ';' {
-                            $$ = $1;
-                        }
-                        | function_call ';' {
-                            $$ = $1;
-                        }
-                        ;
+                abre_escopo commands_block fecha_escopo ';' 
+                {
+                $$ = $2;
+                }
+                | local_var_command ';' 
+                {
+                    $$ = $1;
+                }
+                | set_command  ';' 
+                {
+                    $$ = $1;
+                }
+                | flow_control_command 
+                {
+                    $$ = $1;
+                }
+                | return_command ';' 
+                {
+                    $$ = $1;
+                }
+                | function_call ';' 
+                {
+                    $$ = $1;
+                }
+                ;
 
-local_var_command:
-                        type local_vars_list {
-                            $$ = $2;
-                            No *folha = $1;
-                            atualizarTipo($$, folha->tipo);
+local_var_command: 
+                    TK_PR_BOOL local_vars_list	
+                    {
+                        $$ = $2; 
+                        if($2 != NULL) 
+                        {
+                            No *folha = $2;
+                            No *id = $2->filhos[0];
+                            definirTipo($$, TYPE_BOOL);
+                            definirTipo(id, TYPE_BOOL);
+                            while(folha->n_filhos == 3) 
+                            {
+                                folha = folha->filhos[2];
+                                id = folha->filhos[0];
+                                definirTipo(folha, TYPE_BOOL);
+                                definirTipo(id, TYPE_BOOL);
+                            }
+                        }
+                        while(listaChaves != NULL) 
+                        {                             
+                            ChaveSimbolo* chave = criarNomeChave( listaChaves->chave.nomeChave);                                               
+                            ConteudoTabela* conteudo = novoConteudo(chave, listaChaves->valor, get_line_number(), ID_SYMBOL, TYPE_BOOL); 
+                            adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
+                            listaChaves =  listaChaves->proximo;
+                        }
+                            listaChaves = NULL;
+                    } ; 
 
-                            // Procura na tabela
-                            // 1.1. Reporta err_declared
-                            // 1.2. Adiciona na tabela todos os local_vars_list
-                        } 
-                        ;
+local_var_command: 
+                    TK_PR_INT local_vars_list	
+                    {
+                        $$ = $2; 
+                        if($2 != NULL) 
+                        {
+                            No *folha = $2;
+                            No *id = $2->filhos[0];
+                            definirTipo($$, TYPE_INT);
+                            definirTipo(id, TYPE_INT);
+                            while(folha->n_filhos == 3) 
+                            {
+                                folha = folha->filhos[2];
+                                id = folha->filhos[0];
+                                definirTipo(folha, TYPE_INT);
+                                definirTipo(id, TYPE_INT);
+                            }
+                        }
+                        while(listaChaves != NULL) 
+                        {                             
+                            ChaveSimbolo* chave = criarNomeChave(listaChaves->chave.nomeChave);                                                
+                            ConteudoTabela*  conteudo =   novoConteudo(chave,  listaChaves->valor, get_line_number(), ID_SYMBOL, TYPE_INT); 
+                            adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
+                            listaChaves =  listaChaves->proximo;
+                        }
+                        listaChaves = NULL;
+                    } ; 
+
+local_var_command: 
+                    TK_PR_FLOAT local_vars_list	
+                    {
+                        $$ = $2; 
+                        if($2 != NULL) 
+                        {
+                            No *folha = $2;
+                            No *id = $2->filhos[0];
+                            definirTipo($$, TYPE_FLOAT);
+                            definirTipo(id, TYPE_FLOAT);
+                            while(folha->n_filhos == 3) 
+                            {
+                                folha = folha->filhos[2];
+                                id = folha->filhos[0];
+                                definirTipo(folha, TYPE_FLOAT);
+                                definirTipo(id, TYPE_FLOAT);
+                            }
+                        }
+                        while( listaChaves != NULL) 
+                        {                             
+                            ChaveSimbolo* chave = criarNomeChave(listaChaves->chave.nomeChave);                                                
+                            ConteudoTabela* conteudo = novoConteudo(chave, listaChaves->valor, get_line_number(), ID_SYMBOL, TYPE_FLOAT); 
+                            adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
+                            listaChaves = listaChaves->proximo;
+                        }
+                        listaChaves = NULL;
+                    } ; 
 
 local_vars_list:
-                        TK_IDENTIFICADOR ',' local_vars_list {
-                            $$ = criarNoTipoLexico($1, tIndefinido);
-                            adicionarFilho($$, $3);
-                        }
-                        | local_var_list_complement ',' local_vars_list {
-                            $$ = $1;
-                            adicionarFilho($$, $3);
-                        }
-                        | TK_IDENTIFICADOR {
-                            $$ = criarNoTipoLexico($1, tIndefinido);
-                        }
-                        | local_var_list_complement {
-                            $$ = $1;
+                    TK_IDENTIFICADOR ',' local_vars_list 
+                    {
+                        if($3 == NULL)
+                        {
+                            $$ = NULL;
                         } 
-                        ;
+                        else
+                        {
+                            $$ = $3;
+                        }
+                    }
+                    | local_var_list_complement ',' local_vars_list 
+                    {
+                        adicionarFilho($1, $3);
+                        $$ = $1;
+                    }
+                    | TK_IDENTIFICADOR 
+                    {
+                        $$ = NULL;
+                            adicionarChaveNaLista($1->valor, &listaChaves, TYPE_UNDEFINED, NULL);
+                    }
+                    | local_var_list_complement 
+                    {
+                        $$ = $1;
+                    } 
+                    ;
 
 local_var_list_complement:
-                        TK_IDENTIFICADOR TK_OC_LE literal {
-                            No *folha = $3;
-                            $$ = criarNo("<=", tIndefinido);
-                            adicionarFilho($$, criarNoTipoLexico($1, tIndefinido));
-                            adicionarFilho($$, $3);
-                        }
-                        ;
+                            TK_IDENTIFICADOR TK_OC_LE literal 
+                            {
+                                $$ = criarNo("<=");
+                                adicionarFilho($$, criarNoTipoLexico($1));
+                                adicionarFilho($$, $3);
+                                adicionarChaveNaLista($1->valor, &listaChaves, $3->tipo, $3->valor_lexico->valor);
+
+                            }
+                            ;
 
 set_command:
-                        TK_IDENTIFICADOR '=' expr {
-                            No *folha = $3;
-                            $$ = criarNo("=", tIndefinido);
-                            // Tipo avaliado pela tabela
-                            adicionarFilho($$, criarNoTipoLexico($1, tIndefinido));
-                            adicionarFilho($$, $3);
-
-                            // Procura na Tabela
-                            // 1.1. Reporta err_undeclared (caso não encontrado)
-                            // 1.2. Reporta err_function (caso encontrado e ser uma função)
-                            // 1.3. Configura na Tabela
-                        }
-                        ;
+                TK_IDENTIFICADOR '=' expr 
+                {
+                    ChaveSimbolo* chave = criarNomeChave($1->valor);
+                    ConteudoTabela* conteudo = procurarNaPilhaDeTabelas(chave, pilhaEscopo, ID_SYMBOL, get_line_number());                                          
+                    $$ = criarNo("="); 
+                    No* id = criarNoTipoLexico($1);
+                    definirTipo(id, conteudo->tipo);
+                    adicionarFilho($$, id); 
+                    adicionarFilho($$, $3); 
+                    definirTipo($$, conteudo->tipo);
+                }
+                ;
 
 function_call:
-                        TK_IDENTIFICADOR '(' args_list ')' {
-                            // Tipo avaliado pela tabela
-                            $$ = criarNoTipoLexico($1, tIndefinido);
-                            atualizarValor($$);
-                            adicionarFilho($$, $3);
+                TK_IDENTIFICADOR '(' args_list ')' 
+                {
+                    $$ = criarNoTipoLexico($1); 
+                    atualizarValor($$); 
+                    adicionarFilho($$, $3); 
+                    ChaveSimbolo* chave = criarNomeChave($1->valor); 
+                    ConteudoTabela* conteudo = procurarNaPilhaDeTabelas(chave, pilhaEscopo, FUN_SYMBOL, get_line_number());
+                    definirTipo($$, conteudo->tipo); 
+                    listaChaves = NULL;
+                }
+                ;
 
-                            // Procura na tabela
-                            // 1.1. Reporta err_undeclared (caso não encontrado)
-                            // 1.2. Reporta err_variable (caso encontrado e ser uma variável)
-                            // 1.3. Abre tabela e seta argumentos
-                        }
-                        ;
+args_list:              
+            args
+            { 
+                $$ = $1; 
+            }
+            | {
+                    $$ = NULL;
+            }
+            ;
 
-args_list:              args{ 
-                            $$ = $1; 
-                        }
-		                | {
-                             $$ = NULL;
-                        }
-		                ;
-
-args:                   arg ',' args {
-                            adicionarFilho($1, $3); 
-                            $$ = $1; 
-                        } 
-			            | arg {
-                            $$ = $1;
-                        }
-		               ;
+args:                   
+        arg ',' args 
+        {
+            adicionarFilho($1, $3); 
+            $$ = $1; 
+        } 
+        | arg 
+        {
+            $$ = $1;
+        }
+        ;
 
 arg:
-                        expr {
-                            $$ = $1;
-                        }
-                        ;
+        expr 
+        {
+            $$ = $1;
+            adicionarChaveNaLista($1->valor, &listaChaves, $1->tipo, NULL); //so importa tipo!
+        }
+        ;
 
 return_command:
-                        TK_PR_RETURN expr {
-                            // Verifica na tabela
-                            $$ = criarNo("return", tIndefinido);
-                            adicionarFilho($$, $2);
-                        }
-                        ;
+                    TK_PR_RETURN expr 
+                    {
+                        $$ = criarNo("return");
+                        adicionarFilho($$, $2);
+                        int tipo =  obterTipo($2);
+                        definirTipo($$, tipo);
+                    }
+                    ;
 
 flow_control_command:
-    condicional | iterative ';';
+                        condicional | iterative ';';
 
 //if
 condicional:
-                        TK_PR_IF '(' expr ')' empilha_tabela commands_block condicional_complement {
-                            $$ = criarNo("condicional", tIndefinido);
-                            adicionarFilho($$, $3);
-                            adicionarFilho($$, $6);
-                            adicionarFilho($$, $7);
-                            if($7 != NULL){
-                                atualizarValor($$);
-                            }
-                        }
-                        ;
+                TK_PR_IF '(' expr ')' abre_escopo commands_block fecha_escopo condicional_complement 
+                {
+                    $$ = criarNo("condicional");
+                    adicionarFilho($$, $3);
+                    adicionarFilho($$, $6);
+                    adicionarFilho($$, $8);
+                    if($8 != NULL)
+                    {
+                        atualizarValor($$);
+                    }
+                    definirTipo($$,  obterTipo($3));
+                }
+                ;
 
 //else
 condicional_complement:
-                        TK_PR_ELSE empilha_tabela commands_block ';' {
+                        TK_PR_ELSE abre_escopo commands_block fecha_escopo ';' 
+                        {
                             $$ = $3;
                         }
-                        | ';' {
+                        | ';' 
+                        {
                             $$ = NULL;
                         }
                         ;
 
 //while
 iterative:
-                        TK_PR_WHILE '(' expr ')' empilha_tabela commands_block {
-                            $$ = criarNo("iterative", tIndefinido);
-                            adicionarFilho($$, $3);
-                            adicionarFilho($$, $6);
-                        }
-                        ;
+                TK_PR_WHILE '(' expr ')' abre_escopo commands_block fecha_escopo 
+                {
+                    $$ = criarNo("iterative");
+                    adicionarFilho($$, $3);
+                    adicionarFilho($$, $6);
+                    definirTipo($$,  obterTipo($3));
+                }
+                ;
 
 opG0:
-                        '-' {
-                            $$ = criarNo("-", tIndefinido);
-                        }
-                        | '!' {
-                            $$ = criarNo("!", tIndefinido);
-                        }
-                        ;
+        '-' 
+        {
+            $$ = criarNo("-");
+        }
+        | '!' 
+        {
+            $$ = criarNo("!");
+        }
+        ;
 
 opG1:
-                        '*' {
-                            $$ = criarNo("*", tIndefinido);
-                        }
-                        | '/' {
-                            $$ = criarNo("/", tIndefinido);
-                        }
-                        | '%' {
-                            $$ = criarNo("%", tIndefinido);
-                        }
-                        ;
+        '*' 
+        {
+            $$ = criarNo("*");
+        }
+        | '/' 
+        {
+            $$ = criarNo("/");
+        }
+        | '%' 
+        {
+            $$ = criarNo("%");
+        }
+        ;
 
 opG2:
-                        '+' {
-                            $$ = criarNo("+", tIndefinido);
-                        }
-                        | '-' {
-                            $$ = criarNo("-", tIndefinido);
-                        }
-                        ;
+        '+' 
+        {
+            $$ = criarNo("+");
+        }
+        | '-' 
+        {
+            $$ = criarNo("-");
+        }
+        ;
 
 opG3:
-                        '<' {
-                            $$ = criarNo("<", tIndefinido);
-                        }
-                        | '>' {
-                            $$ = criarNo(">", tIndefinido);
-                        }
-                        | TK_OC_LE {
-                            $$ = criarNo("<=", tIndefinido);
-                        }
-                        | TK_OC_GE {
-                            $$ = criarNo(">=", tIndefinido);
-                        }
-                        ;
+        '<' 
+        {
+            $$ = criarNo("<");
+        }
+        | '>' 
+        {
+            $$ = criarNo(">");
+        }
+        | TK_OC_LE 
+        {
+            $$ = criarNo("<=");
+        }
+        | TK_OC_GE 
+        {
+            $$ = criarNo(">=");
+        }
+        ;
 
 opG4:
-                        TK_OC_EQ {
-                            $$ = criarNo("==", tIndefinido);
-                        }
-                        | TK_OC_NE {
-                            $$ = criarNo("!=", tIndefinido);
-                        }
-                        ;
+        TK_OC_EQ 
+        {
+            $$ = criarNo("==");
+        }
+        | TK_OC_NE 
+        {
+            $$ = criarNo("!=");
+        }
+        ;
 
 opAnd:
-                        TK_OC_AND {
-                            $$ = criarNo("&", tIndefinido);
-                        }
-                        ;
+        TK_OC_AND 
+        {
+            $$ = criarNo("&");
+        }
+        ;
                         
 opOr:
-                        TK_OC_OR {
-                            $$ = criarNo("|", tIndefinido);
-                        }
-                        ;
+        TK_OC_OR 
+        {
+            $$ = criarNo("|");
+        }
+        ;
 
 expr:                   
-                        expr1 {
-                            $$ = $1;
-                        }
-                        | expr opOr expr1 {
-                            adicionarFilho($2, $1);
-                            adicionarFilho($2, $3);
-                            $$ = $2;
-                        }
-                        ;
+        expr1 
+        {
+            $$ = $1;
+        }
+        | expr opOr expr1 
+        {
+            int tipo1 =  obterTipo($1);
+            int tipo2 =  obterTipo($3);															
+            definirTipo($2, inferirTipo(tipo1, tipo2)); 
+            adicionarFilho($2, $1); 
+            adicionarFilho($2, $3); 
+            $$ = $2;
+        }
+        ;
 
 expr1:
-                        expr2 {
-                            $$ = $1;
-                        }
-                        | expr1 opAnd expr2 {
-                            adicionarFilho($2, $1);
-                            adicionarFilho($2, $3);
-                            $$ = $2;
-                        }
-                        ;
+        expr2 
+        {
+            $$ = $1;
+        }
+        | expr1 opAnd expr2 
+        {
+            int tipo1 =  obterTipo($1);
+            int tipo2 =  obterTipo($3);                                                              
+            definirTipo($2, inferirTipo(tipo1, tipo2));
+            adicionarFilho($2, $1); 
+            adicionarFilho($2, $3); 
+            $$ = $2;                            
+        }
+        ;
 
 expr2:
-                        expr3 {
-                            $$ = $1;
-                        }
-                        | expr2 opG4 expr3 {
-                            adicionarFilho($2, $1);
-                            adicionarFilho($2, $3);
-                            $$ = $2;
-                        }
-                        ;
+        expr3 
+        {
+            $$ = $1;
+        }
+        | expr2 opG4 expr3 
+        {
+            int tipo1 =  obterTipo($1);
+            int tipo2 =  obterTipo($3);                                                      
+            definirTipo($2, inferirTipo(tipo1, tipo2)); 
+            adicionarFilho($2, $1); 
+            adicionarFilho($2, $3); 
+            $$ = $2;  
+        }
+        ;
 
 expr3:
-                       expr4 {
-                        $$ = $1;
-                       }
-                       | expr3 opG3 expr4 {
-                            adicionarFilho($2, $1);
-                            adicionarFilho($2, $3);
-                            $$ = $2;
-                       }
-                       ;
+        expr4 
+        {
+        $$ = $1;
+        }
+        | expr3 opG3 expr4 
+        {
+            int tipo1 =  obterTipo($1);
+            int tipo2 =  obterTipo($3);                                                               
+            definirTipo($2, inferirTipo(tipo1, tipo2)); 
+            adicionarFilho($2, $1); 
+            adicionarFilho($2, $3); 
+            $$ = $2;
+        }
+        ;
 
 expr4:
-                       expr5 {
-                        $$ = $1;
-                       } 
-                       | expr4 opG2 expr5 {
-                            adicionarFilho($2, $1);
-                            adicionarFilho($2, $3);
-                            $$ = $2;
-                       }
-                       ;
+        expr5 
+        {
+        $$ = $1;
+        } 
+        | expr4 opG2 expr5 
+        {
+            int tipo1 =  obterTipo($1);
+            int tipo2 =  obterTipo($3);
+            definirTipo($2, inferirTipo(tipo1, tipo2));
+            adicionarFilho($2, $1); 
+            adicionarFilho($2, $3); 
+            $$ = $2;
+        }
+        ;
 
 expr5:
-                        expr6 {
-                            $$ = $1;
-                        }
-                        | expr5 opG1 expr6 {
-                            adicionarFilho($2, $1);
-                            adicionarFilho($2, $3);
-                            $$ = $2;
-                        }
-                        ;
+        expr6 
+        {
+            $$ = $1;
+        }
+        | expr5 opG1 expr6 
+        {
+            int tipo1 =  obterTipo($1);
+            int tipo2 =  obterTipo($3);
+            definirTipo($2, inferirTipo(tipo1, tipo2)); 
+            adicionarFilho($2, $1); 
+            adicionarFilho($2, $3); 
+            $$ = $2;
+        }
+        ;
 
 expr6:
-                        expr7 {
-                            $$ = $1;
-                        }
-                        | opG0 expr7 {
-                            adicionarFilho($1, $2);
-                            $$ = $1;
-                        }
-                        ;
+        expr7 
+        {
+            $$ = $1;
+        }
+        | opG0 expr7 
+        {
+            adicionarFilho($1, $2); 
+            $$ = $1;
+            definirTipo($1, obterTipo($2)); 
+        }
+        ;
 
 expr7:
-                        operando {
-                            $$ = $1;
-                        }
-                        | '(' expr ')' {
-                            $$ = $2;
-                        }
-                        ;
+        operando 
+        {
+            $$ = $1;
+        }
+        | '(' expr ')' 
+        {
+            $$ = $2;
+        }
+        ;
 
 %%
 

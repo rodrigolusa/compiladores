@@ -1,4 +1,4 @@
-/*Grupo P - Rodrigo Antonio Rezende Lusa*/
+/*Grupo P -> João Carlos Almeida da Silva - Rodrigo Antonio Rezende Lusa*/
 
 %{
 int yylex(void);
@@ -96,7 +96,7 @@ simple_command_list:
 
 /* comandos simples */
 simple_command:
-    local_var_command | set_command | function_call | return_command | flow_control_command;
+    local_var_command | set_command | function_call | return_command | flow_control_command | ;
 
 
 /* declaração de variável */

@@ -5,12 +5,11 @@
 
 extern void exporta(void *arvore);
 
-No *criarNoTipoLexico(TipoLexico *valor_lexico, int tipo)
+No *criarNoTipoLexico(TipoLexico *valor_lexico)
 {
     No *novo_nodo = (No *) calloc(1, sizeof(No));
 
     novo_nodo->valor_lexico = valor_lexico;
-    novo_nodo->tipo = tipo;
     novo_nodo->n_filhos = 0;
     novo_nodo->filhos = NULL;
     strcpy(novo_nodo->valor, valor_lexico->valor);
@@ -18,27 +17,16 @@ No *criarNoTipoLexico(TipoLexico *valor_lexico, int tipo)
     return novo_nodo;
 }
 
-No *criarNo(char *valor, int tipo)
+No *criarNo(char *valor)
 {
     No *novo_nodo = (No *) calloc(1, sizeof(No));
 
     novo_nodo->valor_lexico = NULL;
-    novo_nodo->tipo = tipo;
     novo_nodo->n_filhos = 0;
     novo_nodo->filhos = NULL;
     strcpy(novo_nodo->valor, valor);
 
     return novo_nodo;
-}
-
-void atualizarTipo(No *no, int tipo)
-{
-    no->tipo = tipo;
-    if(no->n_filhos != 0) {
-        for(int i=0; i<no->n_filhos; i++) {
-            atualizarTipo(no->filhos[i], tipo);
-        }
-    }
 }
 
 void adicionarFilho(No *pai, No *filho)
@@ -82,12 +70,11 @@ void imprimirNos(No *pai)
 {
     int t_filhos = pai->n_filhos;
     int i = 0;
-    static char* tipo[] = { "indefinido", "bool", "int", "float" };
 
     if(strcmp(pai->valor, "condicional") == 0)
-        printf("%p [label=\"if - %s\"];\n", pai, tipo[pai->tipo]);
+        printf("%p [label=\"if\"];\n", pai);
     else
-        printf("%p [label=\"%s - %s\"];\n", pai, pai->valor, tipo[pai->tipo]);
+        printf("%p [label=\"%s\"];\n", pai, pai->valor);
 
     while(t_filhos > 0) {
         imprimirNos(pai->filhos[i]);
@@ -123,9 +110,38 @@ void atualizarValor(No* no)
     }
 }
 
-int verificaValor(No* no, char *val) {
-    if(strcmp(no->valor, val) == 0)
+int verificaValor(No* no, char *valor) 
+{
+    if(strcmp(no->valor, valor) == 0)
+    {
         return 1;
+    }
     else
-	return 0;
+    {
+	    return 0;
+    }
 }
+
+int obterTipo(No* no)
+{	
+	return no->tipo;
+}
+
+void definirTipo(No* no, enum tipoSemantico tipo) 
+{ 
+    no->tipo = tipo;
+}
+
+enum tipoSemantico leracionamentoTipos[][4] = {
+    // TYPE_INT         TYPE_FLOAT          TYPE_BOOL           TYPE_UNDEFINED
+    { TYPE_INT,         TYPE_FLOAT,         TYPE_INT,           TYPE_UNDEFINED },  // TYPE_INT
+    { TYPE_FLOAT,       TYPE_FLOAT,         TYPE_FLOAT,         TYPE_UNDEFINED },  // TYPE_FLOAT
+    { TYPE_INT,         TYPE_FLOAT,         TYPE_BOOL,          TYPE_UNDEFINED },  // TYPE_BOOL
+    { TYPE_UNDEFINED,   TYPE_UNDEFINED,     TYPE_UNDEFINED,     TYPE_UNDEFINED }  // TYPE_UNDEFINED
+};
+
+enum tipoSemantico inferirTipo(enum tipoSemantico tipo1, enum tipoSemantico tipo2)
+{
+    return leracionamentoTipos[tipo1][tipo2];
+}
+

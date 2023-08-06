@@ -1,5 +1,7 @@
-etapa4: tipolexico.o arvore.o parser.tab.o lex.yy.o main.o
-	gcc -o etapa4 parser.tab.o lex.yy.o tipolexico.o arvore.o main.o
+#Grupo P -> João Carlos Almeida da Silva - Rodrigo Antonio Rezende Lusa
+
+etapa4: tipolexico.o arvore.o tabela.o escopo.o parser.tab.o lex.yy.o main.o
+	gcc -o etapa4 parser.tab.o lex.yy.o tipolexico.o arvore.o tabela.o escopo.o main.o
 main.o: main.c
 	gcc -c main.c
 parser.tab.o: parser.tab.c
@@ -14,5 +16,9 @@ tipolexico.o: tipolexico.c tipolexico.h
 	gcc -c tipolexico.c
 arvore.o: arvore.c arvore.h tipolexico.h
 	gcc -c arvore.c
+tabela.o: tabela.h arvore.h tabela.c
+	gcc -c tabela.c
+escopo.o: tabela.h escopo.h escopo.c
+	gcc -c escopo.c
 clean:
 	rm *.o lex.yy.c parser.tab.c etapa4

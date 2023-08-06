@@ -6,6 +6,3 @@ all:
 
 clean:
 	rm main.o lex.yy.o lex.yy.c etapa2 parser.tab.o parser.tab.c parser.tab.h parser.output
-
-test:
-	./a.out < test.in > test.out
