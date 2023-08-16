@@ -25,6 +25,7 @@ typedef struct ListaChavesSimbolo {
 typedef struct ConteudoTabela {
     ChaveSimbolo* chave;
     int linha;
+    int deslocamento;
     enum origemSimbolo origem;
     enum tipoSemantico tipo;
     char valor[TAMANHO_MAXIMO];
@@ -34,7 +35,7 @@ typedef struct ConteudoTabela {
 ChaveSimbolo* criarNomeChave(char* valor);
 void definirNomeChave(ChaveSimbolo* chave, char* valor);
 char* obterNomeChave(ConteudoTabela* linha);
-ConteudoTabela* novoConteudo(ChaveSimbolo* chave, char* valor_lexico, int linha, enum origemSimbolo nat, enum tipoSemantico tipo);
+ConteudoTabela* novoConteudo(ChaveSimbolo* chave, char* valor_lexico, int linha, int deslocamento, enum origemSimbolo nat, enum tipoSemantico tipo);
 void atualizarTipoConteudo(ConteudoTabela* linha, enum tipoSemantico tipo);
 void definirListaParametros(ConteudoTabela* conteudo, ListaChavesSimbolo* lista);
 void adicionarChaveNaLista(char* nome, ListaChavesSimbolo** lista, int tipo, char* valor);

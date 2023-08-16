@@ -27,4 +27,4 @@ ConteudoTabela* procurarNaTabela(ChaveSimbolo* chave, Escopo* tabela);
 void verificaConteudoID(int origem, int linha);
 void verificarConteudoFUN(int origem, int linha);
 ConteudoTabela* procurarNaPilhaDeTabelas(ChaveSimbolo* chave, Escopo* topo, int origem, int linha);
-
+int chaveEscopoGlobal(ChaveSimbolo* chave, Escopo* topo, int origem, int linha);

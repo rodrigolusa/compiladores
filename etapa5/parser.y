@@ -1,9 +1,11 @@
 %{
 // Grupo P -> João Carlos Almeida da Silva - Rodrigo Antonio Rezende Lusa
+// GERAÇÃO DE CÓDIGO EM UMA PASSAGEM
 
 #include <stdlib.h>
 #include <stdio.h>
 #include "escopo.h"
+#define TAMANHO_MAXIMO 64
 
 int yylex(void);
 void yyerror (char const *s);
@@ -12,6 +14,11 @@ extern char *yytext;
 extern void *arvore;
 Escopo* pilhaEscopo = NULL;
 ListaChavesSimbolo* listaChaves = NULL;
+int temporarioDisponivel = 0;
+int rotuloDisponivel = 0;
+int deslocamentoNovoDadoGlobal = 0;
+int deslocamentoNovoDadoLocal = 0;
+int memoriaReservada = 0;
 %}
 
 %define parse.error verbose
@@ -99,7 +106,8 @@ fecha_escopo:
 
 programa:
             array 
-            { 
+            {
+                definirCodigo($1, "halt", NULL, NULL, NULL);
                 arvore = $1; 
             } 
             | { 
@@ -162,7 +170,9 @@ function:
                     $$ = $1; adicionarFilho($$, $4); definirTipo($$, TYPE_INT);
                     ChaveSimbolo* chave = criarNomeChave($1->valor);
                     ConteudoTabela* conteudo = procurarNaPilhaDeTabelas(chave, pilhaEscopo, FUN_SYMBOL, get_line_number());
-                    atualizarTipoConteudo(conteudo, TYPE_INT);                             
+                    atualizarTipoConteudo(conteudo, TYPE_INT);
+                    if($4 != NULL)
+                        concatenarListas(&$$->codigo, $4->codigo);
             } ;
             | header TK_OC_MAP TK_PR_BOOL body fecha_escopo 
             {
@@ -189,7 +199,7 @@ fun_name:
         {
             $$ = criarNoTipoLexico($1); 
             ChaveSimbolo* chave = criarNomeChave($1->valor);
-            ConteudoTabela* conteudo =   novoConteudo(chave, $1->valor, get_line_number(), FUN_SYMBOL, TYPE_UNDEFINED); 
+            ConteudoTabela* conteudo =   novoConteudo(chave, $1->valor, get_line_number(), 0, FUN_SYMBOL, TYPE_UNDEFINED); 
             adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
         } ;
 
@@ -205,21 +215,21 @@ param:
         TK_PR_INT TK_IDENTIFICADOR 
         {
             ChaveSimbolo* chave = criarNomeChave($2->valor);
-            ConteudoTabela* conteudo = novoConteudo(chave, $2->valor, get_line_number(), ID_SYMBOL, TYPE_INT); 
+            ConteudoTabela* conteudo = novoConteudo(chave, $2->valor, get_line_number(), 0, ID_SYMBOL, TYPE_INT); 
             adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
             adicionarChaveNaLista(chave->nomeChave, &listaChaves, TYPE_INT, NULL);
         } ;
         | TK_PR_FLOAT TK_IDENTIFICADOR 
         {
             ChaveSimbolo* chave = criarNomeChave($2->valor);
-            ConteudoTabela* conteudo = novoConteudo(chave, $2->valor, get_line_number(), ID_SYMBOL, TYPE_FLOAT); 
+            ConteudoTabela* conteudo = novoConteudo(chave, $2->valor, get_line_number(), 0, ID_SYMBOL, TYPE_FLOAT); 
             adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
             adicionarChaveNaLista(chave->nomeChave, &listaChaves, TYPE_FLOAT, NULL);
         } ;
         | TK_PR_BOOL TK_IDENTIFICADOR 
         {
             ChaveSimbolo* chave = criarNomeChave($2->valor);
-            ConteudoTabela* conteudo = novoConteudo(chave, $2->valor, get_line_number(), ID_SYMBOL, TYPE_BOOL); 
+            ConteudoTabela* conteudo = novoConteudo(chave, $2->valor, get_line_number(), 0, ID_SYMBOL, TYPE_BOOL); 
             adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
             adicionarChaveNaLista(chave->nomeChave, &listaChaves, TYPE_BOOL, NULL); 
         } ;
@@ -229,9 +239,11 @@ literal:
         { 
             $$ = criarNoTipoLexico($1);
             ChaveSimbolo* chave = criarNomeChave($1->valor);
-            ConteudoTabela* conteudo = novoConteudo(chave, $1->valor, get_line_number(), LIT_SYMBOL, TYPE_INT);
+            ConteudoTabela* conteudo = novoConteudo(chave, $1->valor, get_line_number(), 0, LIT_SYMBOL, TYPE_INT);
             adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
-            definirTipo($$, TYPE_INT); 
+            definirTipo($$, TYPE_INT);
+            definirTemporario($$, temporarioDisponivel); temporarioDisponivel++;
+            definirCodigo($$, "loadI", $$->valor, NULL, $$->local);
         } ;
 
 literal: 
@@ -239,7 +251,7 @@ literal:
         { 
             $$ = criarNoTipoLexico($1);
             ChaveSimbolo* chave = criarNomeChave($1->valor);
-            ConteudoTabela* conteudo = novoConteudo(chave, $1->valor, get_line_number(), LIT_SYMBOL, TYPE_FLOAT);
+            ConteudoTabela* conteudo = novoConteudo(chave, $1->valor, get_line_number(), 0, LIT_SYMBOL, TYPE_FLOAT);
             adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
             definirTipo($$, TYPE_FLOAT); 
         } ;
@@ -249,7 +261,7 @@ literal:
         { 
             $$ = criarNoTipoLexico($1);
             ChaveSimbolo* chave = criarNomeChave($1->valor);
-            ConteudoTabela* conteudo = novoConteudo(chave, $1->valor, get_line_number(), LIT_SYMBOL, TYPE_BOOL);
+            ConteudoTabela* conteudo = novoConteudo(chave, $1->valor, get_line_number(), 0, LIT_SYMBOL, TYPE_BOOL);
             adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
             definirTipo($$, TYPE_BOOL); 
         } ;
@@ -259,7 +271,7 @@ literal:
     {
         $$ = criarNoTipoLexico($1);
         ChaveSimbolo* chave = criarNomeChave($1->valor);
-        ConteudoTabela* conteudo = novoConteudo(chave, $1->valor, get_line_number(), LIT_SYMBOL, TYPE_BOOL);
+        ConteudoTabela* conteudo = novoConteudo(chave, $1->valor, get_line_number(), 0, LIT_SYMBOL, TYPE_BOOL);
         adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
         definirTipo($$, TYPE_BOOL); 
     } ;
@@ -270,15 +282,27 @@ operando:
                 $$ = criarNoTipoLexico($1); 
                 ChaveSimbolo* chave = criarNomeChave($1->valor); 
                 ConteudoTabela* conteudo = procurarNaPilhaDeTabelas(chave, pilhaEscopo, ID_SYMBOL, get_line_number());
-                definirTipo($$, conteudo->tipo); 
+                definirTipo($$, conteudo->tipo);
+                definirTemporario($$, temporarioDisponivel); temporarioDisponivel++;
+                char* deslocamento = malloc(sizeof(char)*TAMANHO_MAXIMO);
+                if(chaveEscopoGlobal(chave, pilhaEscopo, ID_SYMBOL, get_line_number()) == 1)
+                {
+                    sprintf(deslocamento, "%d", conteudo->deslocamento);
+                    definirCodigo($$, "loadAI", "rbss", deslocamento, $$->local);
+                }
+                else if(chaveEscopoGlobal(chave, pilhaEscopo, ID_SYMBOL, get_line_number()) == 0)
+                {
+                    sprintf(deslocamento, "%d", conteudo->deslocamento);
+                    definirCodigo($$, "loadAI", "rfp", deslocamento, $$->local);
+                }
             }
-            | literal 
+            | literal
             {
                 $$ = $1; 
             }
-            | function_call 
+            | function_call
             {
-                $$ = $1; 
+                $$ = $1;
             }
             ;
 
@@ -288,7 +312,7 @@ global:
             while(listaChaves != NULL) 
             {                             
                 ChaveSimbolo* chave = criarNomeChave(listaChaves->chave.nomeChave);
-                ConteudoTabela* conteudo = novoConteudo(chave, "0", get_line_number(), ID_SYMBOL, TYPE_BOOL); 
+                ConteudoTabela* conteudo = novoConteudo(chave, "0", get_line_number(), 0, ID_SYMBOL, TYPE_BOOL); 
                 adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
                 listaChaves = listaChaves->proximo;
             }
@@ -302,7 +326,8 @@ global:
             while(listaChaves != NULL) 
             {                             
                 ChaveSimbolo* chave = criarNomeChave(listaChaves->chave.nomeChave);
-                ConteudoTabela* conteudo = novoConteudo(chave, "0", get_line_number(), ID_SYMBOL, TYPE_INT); 
+                ConteudoTabela* conteudo = novoConteudo(chave, "0", get_line_number(), deslocamentoNovoDadoGlobal, ID_SYMBOL, TYPE_INT);
+                deslocamentoNovoDadoGlobal+=4;
                 adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
                 listaChaves = listaChaves->proximo;
             }
@@ -316,7 +341,7 @@ global:
             while(listaChaves != NULL) 
             {                             
                 ChaveSimbolo* chave = criarNomeChave(listaChaves->chave.nomeChave);
-                ConteudoTabela* conteudo = novoConteudo(chave, "0", get_line_number(), ID_SYMBOL, TYPE_FLOAT); 
+                ConteudoTabela* conteudo = novoConteudo(chave, "0", get_line_number(), 0, ID_SYMBOL, TYPE_FLOAT); 
                 adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
                 listaChaves = listaChaves->proximo;                                                              
             }
@@ -369,15 +394,17 @@ simple_command:
                                     while(folha->n_filhos == 3)
                                         folha = folha->filhos[2];
                                     adicionarFilho(folha, $2);
+                                    concatenarListas(&folha->codigo, $2->codigo);
                                 }
-                            else 
+                                else 
+                                {
+                                    adicionarFilho($1, $2);
+                                    concatenarListas(&$1->codigo, $2->codigo);
+                                } 
+                                $$ = $1;
+                            }
+                            else
                             {
-                                adicionarFilho($1, $2);
-                            } 
-                            $$ = $1;
-                            } 
-                            else 
-                            { 
                                 $$ = $1; 
                             } 
                         } 
@@ -442,7 +469,7 @@ local_var_command:
                         while(listaChaves != NULL) 
                         {                             
                             ChaveSimbolo* chave = criarNomeChave( listaChaves->chave.nomeChave);                                               
-                            ConteudoTabela* conteudo = novoConteudo(chave, listaChaves->valor, get_line_number(), ID_SYMBOL, TYPE_BOOL); 
+                            ConteudoTabela* conteudo = novoConteudo(chave, listaChaves->valor, get_line_number(), 0, ID_SYMBOL, TYPE_BOOL); 
                             adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
                             listaChaves =  listaChaves->proximo;
                         }
@@ -468,13 +495,15 @@ local_var_command:
                             }
                         }
                         while(listaChaves != NULL) 
-                        {                             
-                            ChaveSimbolo* chave = criarNomeChave(listaChaves->chave.nomeChave);                                                
-                            ConteudoTabela*  conteudo =   novoConteudo(chave,  listaChaves->valor, get_line_number(), ID_SYMBOL, TYPE_INT); 
+                        {
+                            ChaveSimbolo* chave = criarNomeChave(listaChaves->chave.nomeChave);   
+                            ConteudoTabela*  conteudo = novoConteudo(chave,  listaChaves->valor, get_line_number(), deslocamentoNovoDadoLocal, ID_SYMBOL, TYPE_INT);
+                            deslocamentoNovoDadoLocal+=4;
                             adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
                             listaChaves =  listaChaves->proximo;
                         }
                         listaChaves = NULL;
+                        memoriaReservada = 0;
                     } ; 
 
 local_var_command: 
@@ -498,7 +527,7 @@ local_var_command:
                         while( listaChaves != NULL) 
                         {                             
                             ChaveSimbolo* chave = criarNomeChave(listaChaves->chave.nomeChave);                                                
-                            ConteudoTabela* conteudo = novoConteudo(chave, listaChaves->valor, get_line_number(), ID_SYMBOL, TYPE_FLOAT); 
+                            ConteudoTabela* conteudo = novoConteudo(chave, listaChaves->valor, get_line_number(), 0, ID_SYMBOL, TYPE_FLOAT); 
                             adicionarNaTabela(conteudo, pilhaEscopo, get_line_number());
                             listaChaves = listaChaves->proximo;
                         }
@@ -511,6 +540,7 @@ local_vars_list:
                         if($3 == NULL)
                         {
                             $$ = NULL;
+                            adicionarChaveNaLista($1->valor, &listaChaves, TYPE_UNDEFINED, NULL);
                         } 
                         else
                         {
@@ -520,12 +550,14 @@ local_vars_list:
                     | local_var_list_complement ',' local_vars_list 
                     {
                         adicionarFilho($1, $3);
+                        if($3 != NULL)
+                            concatenarListas(&$1->codigo, $3->codigo);
                         $$ = $1;
                     }
                     | TK_IDENTIFICADOR 
                     {
                         $$ = NULL;
-                            adicionarChaveNaLista($1->valor, &listaChaves, TYPE_UNDEFINED, NULL);
+                        adicionarChaveNaLista($1->valor, &listaChaves, TYPE_UNDEFINED, NULL);
                     }
                     | local_var_list_complement 
                     {
@@ -539,8 +571,12 @@ local_var_list_complement:
                                 $$ = criarNo("<=");
                                 adicionarFilho($$, criarNoTipoLexico($1));
                                 adicionarFilho($$, $3);
+                                int deslocamento = deslocamentoNovoDadoLocal + memoriaReservada; memoriaReservada+=4;
                                 adicionarChaveNaLista($1->valor, &listaChaves, $3->tipo, $3->valor_lexico->valor);
-
+                                concatenarListas(&$$->codigo, $3->codigo);
+                                char* posicaoMemoria = malloc(sizeof(char)*TAMANHO_MAXIMO);
+                                sprintf(posicaoMemoria, "rfp, %d", deslocamento);
+                                definirCodigo($$, "storeAI", $3->local, NULL, posicaoMemoria);
                             }
                             ;
 
@@ -549,12 +585,24 @@ set_command:
                 {
                     ChaveSimbolo* chave = criarNomeChave($1->valor);
                     ConteudoTabela* conteudo = procurarNaPilhaDeTabelas(chave, pilhaEscopo, ID_SYMBOL, get_line_number());                                          
-                    $$ = criarNo("="); 
+                    $$ = criarNo("=");
                     No* id = criarNoTipoLexico($1);
                     definirTipo(id, conteudo->tipo);
                     adicionarFilho($$, id); 
                     adicionarFilho($$, $3); 
                     definirTipo($$, conteudo->tipo);
+                    concatenarListas(&$$->codigo, $3->codigo);
+                    char* posicaoMemoria = malloc(sizeof(char)*TAMANHO_MAXIMO);
+                    if(chaveEscopoGlobal(chave, pilhaEscopo, ID_SYMBOL, get_line_number()) == 1)
+                    {
+                        sprintf(posicaoMemoria, "rbss, %d", conteudo->deslocamento);
+                        definirCodigo($$, "storeAI", $3->local, NULL, posicaoMemoria);
+                    }
+                    else if(chaveEscopoGlobal(chave, pilhaEscopo, ID_SYMBOL, get_line_number()) == 0)
+                    {
+                        sprintf(posicaoMemoria, "rfp, %d", conteudo->deslocamento);
+                        definirCodigo($$, "storeAI", $3->local, NULL, posicaoMemoria);
+                    }
                 }
                 ;
 
@@ -622,11 +670,24 @@ condicional:
                     adicionarFilho($$, $3);
                     adicionarFilho($$, $6);
                     adicionarFilho($$, $8);
+                    definirTipo($$,  obterTipo($3));
+                    char *rotulo1 = definirRotulo(rotuloDisponivel); rotuloDisponivel++;
+                    char *rotulo2 = definirRotulo(rotuloDisponivel); rotuloDisponivel++;
+                    char *rotulos = malloc(sizeof(char)*TAMANHO_MAXIMO);
+                    sprintf(rotulos, "%s, %s", rotulo1, rotulo2);
+                    concatenarListas(&$$->codigo, $3->codigo);
+                    definirCodigo($$, "cbr", $3->local, NULL, rotulos);
+                    rotulaAposOperacao($$, rotulo1);
+                    if($6 !=NULL)
+                    {
+                        concatenarListas(&$$->codigo, $6->codigo);
+                    }
+                    rotulaAposOperacao($$, rotulo2);
                     if($8 != NULL)
                     {
                         atualizarValor($$);
+                        concatenarListas(&$$->codigo, $8->codigo);
                     }
-                    definirTipo($$,  obterTipo($3));
                 }
                 ;
 
@@ -650,15 +711,31 @@ iterative:
                     adicionarFilho($$, $3);
                     adicionarFilho($$, $6);
                     definirTipo($$,  obterTipo($3));
+                    char *rotuloInicio = definirRotulo(rotuloDisponivel); rotuloDisponivel++;
+                    char *rotulo1 = definirRotulo(rotuloDisponivel); rotuloDisponivel++;
+                    char *rotulo2 = definirRotulo(rotuloDisponivel); rotuloDisponivel++;
+                    char *rotulos = malloc(sizeof(char)*TAMANHO_MAXIMO);
+                    definirCodigo($$, "nop", NULL, NULL, NULL);
+                    rotulaAposOperacao($$, rotuloInicio);
+                    sprintf(rotulos, "%s, %s", rotulo1, rotulo2);
+                    concatenarListas(&$$->codigo, $3->codigo);
+                    definirCodigo($$, "cbr", $3->local, NULL, rotulos);
+                    rotulaAposOperacao($$, rotulo1);
+                    if($6 !=NULL)
+                    {
+                        concatenarListas(&$$->codigo, $6->codigo);
+                    }
+                    definirCodigo($$, "jumpI", NULL, NULL, rotuloInicio);
+                    rotulaAposOperacao($$, rotulo2);
                 }
                 ;
 
 opG0:
-        '-' 
+        '-'
         {
             $$ = criarNo("-");
         }
-        | '!' 
+        | '!'
         {
             $$ = criarNo("!");
         }
@@ -745,7 +822,11 @@ expr:
             int tipo2 =  obterTipo($3);															
             definirTipo($2, inferirTipo(tipo1, tipo2)); 
             adicionarFilho($2, $1); 
-            adicionarFilho($2, $3); 
+            adicionarFilho($2, $3);
+            definirTemporario($2, temporarioDisponivel); temporarioDisponivel++;
+            concatenarListas(&$2->codigo, $1->codigo);
+            concatenarListas(&$2->codigo, $3->codigo);
+            definirCodigo($2, "or", $1->local, $3->local, $2->local);
             $$ = $2;
         }
         ;
@@ -761,7 +842,11 @@ expr1:
             int tipo2 =  obterTipo($3);                                                              
             definirTipo($2, inferirTipo(tipo1, tipo2));
             adicionarFilho($2, $1); 
-            adicionarFilho($2, $3); 
+            adicionarFilho($2, $3);
+            definirTemporario($2, temporarioDisponivel); temporarioDisponivel++;
+            concatenarListas(&$2->codigo, $1->codigo);
+            concatenarListas(&$2->codigo, $3->codigo);
+            definirCodigo($2, "and", $1->local, $3->local, $2->local);
             $$ = $2;                            
         }
         ;
@@ -775,7 +860,20 @@ expr2:
         {
             int tipo1 =  obterTipo($1);
             int tipo2 =  obterTipo($3);                                                      
-            definirTipo($2, inferirTipo(tipo1, tipo2)); 
+            definirTipo($2, inferirTipo(tipo1, tipo2));
+            definirTemporario($2, temporarioDisponivel); temporarioDisponivel++;
+            if(verificaValor($2, "==") == 1)
+            {
+                concatenarListas(&$2->codigo, $1->codigo);
+                concatenarListas(&$2->codigo, $3->codigo);
+                definirCodigo($2, "cmp_EQ", $1->local, $3->local, $2->local);
+            }
+            else if(verificaValor($2, "!=") == 1)
+            {
+                concatenarListas(&$2->codigo, $1->codigo);
+                concatenarListas(&$2->codigo, $3->codigo);
+                definirCodigo($2, "cmp_NE", $1->local, $3->local, $2->local);
+            }
             adicionarFilho($2, $1); 
             adicionarFilho($2, $3); 
             $$ = $2;  
@@ -791,7 +889,32 @@ expr3:
         {
             int tipo1 =  obterTipo($1);
             int tipo2 =  obterTipo($3);                                                               
-            definirTipo($2, inferirTipo(tipo1, tipo2)); 
+            definirTipo($2, inferirTipo(tipo1, tipo2));
+            definirTemporario($2, temporarioDisponivel); temporarioDisponivel++;
+            if(verificaValor($2, ">") == 1)
+            {
+                concatenarListas(&$2->codigo, $1->codigo);
+                concatenarListas(&$2->codigo, $3->codigo);
+                definirCodigo($2, "cmp_GT", $1->local, $3->local, $2->local);
+            }
+            else if(verificaValor($2, "<") == 1)
+            {
+                concatenarListas(&$2->codigo, $1->codigo);
+                concatenarListas(&$2->codigo, $3->codigo);
+                definirCodigo($2, "cmp_LT", $1->local, $3->local, $2->local);
+            }
+            else if(verificaValor($2, ">=") == 1)
+            {
+                concatenarListas(&$2->codigo, $1->codigo);
+                concatenarListas(&$2->codigo, $3->codigo);
+                definirCodigo($2, "cmp_GE", $1->local, $3->local, $2->local);
+            }
+            else if(verificaValor($2, "<=") == 1)
+            {
+                concatenarListas(&$2->codigo, $1->codigo);
+                concatenarListas(&$2->codigo, $3->codigo);
+                definirCodigo($2, "cmp_LE", $1->local, $3->local, $2->local);
+            }
             adicionarFilho($2, $1); 
             adicionarFilho($2, $3); 
             $$ = $2;
@@ -808,6 +931,19 @@ expr4:
             int tipo1 =  obterTipo($1);
             int tipo2 =  obterTipo($3);
             definirTipo($2, inferirTipo(tipo1, tipo2));
+            definirTemporario($2, temporarioDisponivel); temporarioDisponivel++;
+            if(verificaValor($2, "+") == 1)
+            {
+                concatenarListas(&$2->codigo, $1->codigo);
+                concatenarListas(&$2->codigo, $3->codigo);
+                definirCodigo($2, "add", $1->local, $3->local, $2->local);
+            }
+            else if(verificaValor($2, "-") == 1)
+            {
+                concatenarListas(&$2->codigo, $1->codigo);
+                concatenarListas(&$2->codigo, $3->codigo);
+                definirCodigo($2, "sub", $1->local, $3->local, $2->local);
+            }
             adicionarFilho($2, $1); 
             adicionarFilho($2, $3); 
             $$ = $2;
@@ -823,7 +959,20 @@ expr5:
         {
             int tipo1 =  obterTipo($1);
             int tipo2 =  obterTipo($3);
-            definirTipo($2, inferirTipo(tipo1, tipo2)); 
+            definirTipo($2, inferirTipo(tipo1, tipo2));
+            definirTemporario($2, temporarioDisponivel); temporarioDisponivel++;
+            if(verificaValor($2, "*") == 1)
+            {
+                concatenarListas(&$2->codigo, $1->codigo);
+                concatenarListas(&$2->codigo, $3->codigo);
+                definirCodigo($2, "mult", $1->local, $3->local, $2->local);
+            }
+            else if(verificaValor($2, "/") == 1)
+            {
+                concatenarListas(&$2->codigo, $1->codigo);
+                concatenarListas(&$2->codigo, $3->codigo);
+                definirCodigo($2, "div", $1->local, $3->local, $2->local);
+            }
             adicionarFilho($2, $1); 
             adicionarFilho($2, $3); 
             $$ = $2;
@@ -840,6 +989,12 @@ expr6:
             adicionarFilho($1, $2); 
             $$ = $1;
             definirTipo($1, obterTipo($2)); 
+            if(verificaValor($1, "!") == 1)
+            {
+                definirTemporario($$, temporarioDisponivel); temporarioDisponivel++;
+                concatenarListas(&$$->codigo, $2->codigo);
+                definirCodigo($$, "not", $2->local, NULL, $$->local);
+            }
         }
         ;
 

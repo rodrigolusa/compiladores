@@ -185,3 +185,38 @@ ConteudoTabela* procurarNaPilhaDeTabelas(ChaveSimbolo* chave, Escopo* topo, int 
     printf("ERROR: A variável ou função \"%s\" usada na linha %d não foi declarada\n", chave->nomeChave, linha);
     exit(ERR_UNDECLARED);
 }
+
+int chaveEscopoGlobal(ChaveSimbolo* chave, Escopo* topo, int origem, int linha)
+{
+    Escopo* pilha = topo;
+    ConteudoTabela* conteudo = NULL;
+
+    int contador = 0;
+
+    while(pilha != NULL && conteudo == NULL) 
+    {
+        conteudo = procurarNaTabela(chave, pilha);
+
+        if(conteudo != NULL) 
+        {
+            if(origem == ID_SYMBOL)
+            {
+                verificaConteudoID(conteudo->origem, linha);
+            }
+            else if(origem == FUN_SYMBOL)
+            {
+                verificarConteudoFUN(conteudo->origem, linha);
+            }
+
+            if(pilha->escopoAnterior == NULL)
+                return 1; // Sim, Escopo Global
+            else
+                return 0; // Não, Escopo Local
+        }
+
+        contador++;
+        pilha = pilha->escopoAnterior;
+    }
+
+    return -1;
+}

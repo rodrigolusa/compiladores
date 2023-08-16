@@ -1,0 +1,10 @@
+nop
+L0:
+loadI 3 => r0
+loadI 2 => r1
+cmp_GT r0, r1 => r2
+cbr r2 -> L1, L2
+L1:
+jumpI -> L0
+L2:
+halt

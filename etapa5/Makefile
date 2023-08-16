@@ -1,7 +1,7 @@
 #Grupo P -> João Carlos Almeida da Silva - Rodrigo Antonio Rezende Lusa
 
-etapa5: tipolexico.o arvore.o tabela.o escopo.o parser.tab.o lex.yy.o main.o
-	gcc -o etapa5 parser.tab.o lex.yy.o tipolexico.o arvore.o tabela.o escopo.o main.o
+etapa5: tipolexico.o arvore.o tabela.o escopo.o operacao.o parser.tab.o lex.yy.o main.o
+	gcc -o etapa5 parser.tab.o lex.yy.o tipolexico.o arvore.o tabela.o escopo.o operacao.o main.o
 main.o: main.c
 	gcc -c main.c
 parser.tab.o: parser.tab.c
@@ -20,5 +20,7 @@ tabela.o: tabela.h arvore.h tabela.c
 	gcc -c tabela.c
 escopo.o: tabela.h escopo.h escopo.c
 	gcc -c escopo.c
+operacao.o:
+	gcc -c operacao.c
 clean:
-	rm *.o lex.yy.c parser.tab.c etapa5
+	rm *.o lex.yy.c parser.tab.c etapa5 saidas_teste/*

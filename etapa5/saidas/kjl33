@@ -1,0 +1,9 @@
+loadI 1 => r0
+storeAI r0 => rfp, 0
+loadI 1 => r1
+loadAI rfp, 0 => r2
+and r1, r2 => r3
+loadI 0 => r4
+or r3, r4 => r5
+storeAI r5 => rfp, 4
+halt

@@ -22,7 +22,7 @@ char* obterNomeChave(ConteudoTabela* linha)
     return linha->chave->nomeChave;
 }
 
-ConteudoTabela* novoConteudo(ChaveSimbolo* chave, char* valorLexico, int linha, enum origemSimbolo origem, enum tipoSemantico tipo) 
+ConteudoTabela* novoConteudo(ChaveSimbolo* chave, char* valorLexico, int linha, int deslocamento, enum origemSimbolo origem, enum tipoSemantico tipo) 
 {
     ConteudoTabela* linhaTabela = (ConteudoTabela*)malloc(sizeof(ConteudoTabela));
 
@@ -30,6 +30,7 @@ ConteudoTabela* novoConteudo(ChaveSimbolo* chave, char* valorLexico, int linha, 
     strcpy(linhaTabela->chave->nomeChave, chave->nomeChave);
 
     linhaTabela->linha = linha;
+    linhaTabela->deslocamento = deslocamento;
     linhaTabela->origem = origem;
     linhaTabela->tipo = tipo;
 
